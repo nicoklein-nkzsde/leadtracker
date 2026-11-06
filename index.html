@@ -1,0 +1,1442 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Leadtracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Aufbau: eine Arbeitsliste, oben nach unten. Pro Kunde steht genau eine Aufgabe an —
+   Mail rausschicken, nach fünf Tagen anrufen, danach vorbeifahren. Links die Übersicht,
+   rechts die Details des angeklickten Kunden. */
+:root{
+  --paper:#F4F6F9; --surface:#FFFFFF; --surface2:#E9ECF2; --hover:#F0F2F7;
+  --ink:#14161A; --ink2:#575F6E; --ink3:#8B93A3;
+  --line:rgba(20,22,26,.09); --line2:rgba(20,22,26,.17);
+  --accent:#0A52E0; --accent-soft:rgba(10,82,224,.09);
+  --go:#0F7A47; --go-soft:rgba(15,122,71,.10);
+  --wait:#8E5200; --wait-soft:rgba(142,82,0,.10);
+  --stop:#BE2219; --stop-soft:rgba(190,34,25,.09);
+  --mark:#5E36BE; --mark-soft:rgba(94,54,190,.10);
+  --onaccent:#FFFFFF;
+  --shadow:0 1px 2px rgba(16,20,30,.05), 0 4px 14px rgba(16,20,30,.05);
+  --lift:0 1px 2px rgba(16,20,30,.06), 0 14px 38px rgba(16,20,30,.10);
+  --ui:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --say:"Newsreader",Georgia,"Times New Roman",serif;
+  --num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0A0C10; --surface:#15181F; --surface2:#1F232C; --hover:#1A1E26;
+    --ink:#EDEFF4; --ink2:#9BA3B4; --ink3:#697285;
+    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.17);
+    --accent:#6A9BFF; --accent-soft:rgba(106,155,255,.15);
+    --go:#45CE86; --go-soft:rgba(69,206,134,.15);
+    --wait:#E2A742; --wait-soft:rgba(226,167,66,.15);
+    --stop:#FF7267; --stop-soft:rgba(255,114,103,.15);
+    --mark:#B48DFF; --mark-soft:rgba(180,141,255,.15);
+    --onaccent:#0A0C10;
+    --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 14px 38px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0A0C10; --surface:#15181F; --surface2:#1F232C; --hover:#1A1E26;
+  --ink:#EDEFF4; --ink2:#9BA3B4; --ink3:#697285;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.17);
+  --accent:#6A9BFF; --accent-soft:rgba(106,155,255,.15);
+  --go:#45CE86; --go-soft:rgba(69,206,134,.15);
+  --wait:#E2A742; --wait-soft:rgba(226,167,66,.15);
+  --stop:#FF7267; --stop-soft:rgba(255,114,103,.15);
+  --mark:#B48DFF; --mark-soft:rgba(180,141,255,.15);
+  --onaccent:#0A0C10;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 14px 38px rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- Raster ---------- */
+.app{display:grid;grid-template-columns:238px minmax(0,1fr) minmax(360px,28vw);height:100%}
+.side{border-right:1px solid var(--line);display:flex;flex-direction:column;gap:20px;
+  padding-block:22px 16px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:14px;
+  overflow-y:auto;background:var(--paper)}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.detail{background:var(--surface);border-left:1px solid var(--line);overflow-y:auto;min-height:0}
+
+/* Seitenleiste */
+.brand b{font-size:20px;font-weight:700;letter-spacing:-.02em;display:block}
+.brand span{color:var(--ink2);font-size:13px}
+.brand{padding-inline:8px}
+.add{background:var(--accent);color:var(--onaccent);border:none;font-weight:600;padding:10px 14px;
+  border-radius:11px;width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.add:hover{filter:brightness(1.08)}
+.add kbd{font-family:inherit;opacity:.72;font-weight:500;font-size:13px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;justify-content:space-between;align-items:center;background:none;border:none;
+  padding:8px 10px;border-radius:9px;text-align:left;font-weight:500;width:100%}
+.nav button:hover{background:var(--line)}
+.nav button[aria-selected="true"]{background:var(--surface);box-shadow:var(--shadow);font-weight:600}
+.nav .cnt{color:var(--ink2);font-weight:500;font-size:13px;font-variant-numeric:tabular-nums}
+.nav .cnt.hot{color:var(--stop)} .nav .cnt.go{color:var(--go)}
+.sidehead{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);
+  padding-inline:10px;margin-bottom:7px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.kpi{background:var(--surface);border-radius:11px;padding:10px 12px;box-shadow:var(--shadow)}
+.kpi dt{font-size:11.5px;color:var(--ink2);line-height:1.3}
+.kpi dd{margin:3px 0 0;font-size:20px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi.hot dd{color:var(--stop)} .kpi.go dd{color:var(--go)} .kpi.wait dd{color:var(--wait)} .kpi.mark dd{color:var(--mark)}
+.kpi.wide{grid-column:1 / -1} .kpi.wide dd{font-size:17px}
+.savebar{margin-top:auto;font-size:12px;color:var(--ink3);padding-inline:10px;display:flex;gap:7px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ink3);flex:none}
+.dot.on{background:var(--go)} .dot.off{background:var(--wait)}
+
+/* Kopfzeile */
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);
+  padding-block:18px 14px;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}
+.bar h1{font-size:23px;font-weight:700;letter-spacing:-.025em;margin-right:auto}
+.bar h1 small{font-size:13.5px;color:var(--ink2);font-weight:400;margin-left:9px;letter-spacing:0}
+.bar input,.bar select{background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:9px}
+.bar input[type="search"]{width:230px;min-width:0}
+.scroll{overflow:auto;flex:1;min-height:0}
+
+/* ---------- Arbeitsliste ---------- */
+.work{display:flex;flex-direction:column;gap:12px;max-width:860px;
+  padding-block:18px 48px;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}
+.grouphead{display:flex;align-items:baseline;gap:9px;margin-top:10px}
+.grouphead h2{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink2)}
+.grouphead em{font-style:normal;color:var(--ink3);font-size:12.5px}
+.grouphead.stop h2{color:var(--stop)} .grouphead.go h2{color:var(--go)}
+.grouphead.wait h2{color:var(--wait)} .grouphead.mark h2{color:var(--mark)}
+.grouphead:first-child{margin-top:0}
+.hint{color:var(--ink3);font-size:13px;margin:-4px 0 2px;max-width:62ch}
+
+/* Karte */
+.c{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid transparent;overflow:hidden}
+.c.open{box-shadow:var(--lift);border-color:var(--line2)}
+.c.pick{border-color:var(--accent)}
+.c-row{display:flex;gap:14px;align-items:center;padding:14px 18px;text-align:left;width:100%;background:none;border:none}
+.c-row:hover{background:var(--hover)}
+.c-n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--surface2);color:var(--ink2);
+  font-size:12.5px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.c.open .c-n{background:var(--accent);color:var(--onaccent)}
+.c-mid{flex:1;min-width:0}
+.c-mid b{display:block;font-weight:600;font-size:16px;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-mid span{display:block;color:var(--ink2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-right{flex:none;display:flex;gap:7px;align-items:center}
+
+.tag{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;
+  background:var(--surface2);color:var(--ink2);display:inline-block}
+.tag.b{background:var(--accent-soft);color:var(--accent)}
+.tag.g{background:var(--go-soft);color:var(--go)}
+.tag.w{background:var(--wait-soft);color:var(--wait)}
+.tag.r{background:var(--stop-soft);color:var(--stop)}
+.tag.m{background:var(--mark-soft);color:var(--mark)}
+.tag.solid{background:var(--go);color:var(--onaccent)}
+
+.c-body{padding:2px 18px 18px;display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--line);margin-top:-1px}
+.c-body>*:first-child{margin-top:14px}
+
+.block{display:flex;flex-direction:column;gap:8px}
+.block>h3{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+.why{background:var(--surface2);border-radius:11px;padding:12px 14px;font-size:14px;line-height:1.55}
+.why b{display:block;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+.why p{margin:0;overflow-wrap:anywhere}
+
+/* Mailtext */
+.subj{font-weight:600;font-size:15px;background:var(--surface2);border-radius:10px;padding:10px 13px;overflow-wrap:anywhere}
+.subj small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.mailtext{font-family:var(--say);font-size:16px;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere;
+  background:var(--surface2);border-radius:11px;padding:16px 18px;max-height:none}
+.editsubj,.editbody{width:100%;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px}
+.editbody{min-height:260px;font-family:var(--say);font-size:16px;line-height:1.62;resize:vertical}
+.editsubj{font-weight:600}
+
+/* Skript */
+.steps{display:flex;flex-direction:column;gap:9px;counter-reset:s}
+.step{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px;align-items:start}
+.step i{font-style:normal;font-size:11.5px;font-weight:600;color:var(--ink3);font-variant-numeric:tabular-nums;
+  padding-top:4px;text-align:right}
+.step div>em{font-style:normal;display:block;font-size:11px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+.step q{font-family:var(--say);font-size:16.5px;line-height:1.55;quotes:"„" "“";display:block;overflow-wrap:anywhere}
+.step p{margin:3px 0 0;font-size:13px;color:var(--ink2)}
+details.obj{background:var(--surface2);border-radius:11px;overflow:hidden}
+details.obj>summary{padding:11px 14px;font-size:13.5px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+details.obj>summary::-webkit-details-marker{display:none}
+details.obj>summary::after{content:"▾";color:var(--ink3);transition:transform .15s}
+details.obj[open]>summary::after{transform:rotate(180deg)}
+.objs{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px}
+.objs div{border-top:1px solid var(--line);padding-top:11px}
+.objs strong{display:block;font-size:13.5px;margin-bottom:3px}
+.objs q{font-family:var(--say);font-size:15.5px;line-height:1.5;quotes:"„" "“";display:block}
+.objs p{margin:4px 0 0;font-size:12.5px;color:var(--ink3)}
+
+/* Zahlen gross: Telefon, Mail, Adresse */
+.big{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bignum{font-family:var(--num);font-size:24px;font-weight:500;letter-spacing:-.01em;user-select:all;
+  overflow-wrap:anywhere;min-width:0}
+.bigmail{font-size:16px;font-weight:500;user-select:all;overflow-wrap:anywhere;min-width:0}
+
+/* Knöpfe */
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:14px}
+.acts .lbl{width:100%;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3)}
+.btn{border:1px solid var(--line2);background:var(--surface);border-radius:10px;padding:9px 14px;
+  font-size:14px;font-weight:600;display:inline-flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.pri{background:var(--accent);color:var(--onaccent);border-color:transparent}
+.btn.pri:hover{filter:brightness(1.08);background:var(--accent)}
+.btn.good{background:var(--go);color:var(--onaccent);border-color:transparent}
+.btn.good:hover{filter:brightness(1.08);background:var(--go)}
+.btn.g{color:var(--go);border-color:var(--go-soft)}
+.btn.r{color:var(--stop);border-color:var(--stop-soft)}
+.btn.m{color:var(--mark);border-color:var(--mark-soft)}
+.btn.w{color:var(--wait);border-color:var(--wait-soft)}
+.btn.q{border-color:transparent;background:var(--surface2);font-weight:500}
+.btn.sm{padding:6px 11px;font-size:13px;font-weight:500}
+.btn kbd{font-family:var(--num);font-size:11px;font-weight:500;opacity:.6}
+
+.tip{background:var(--accent-soft);border-radius:11px;padding:12px 14px;font-size:13.5px;line-height:1.55}
+.tip b{color:var(--accent)}
+.tip.w{background:var(--wait-soft)} .tip.w b{color:var(--wait)}
+.tip.g{background:var(--go-soft)} .tip.g b{color:var(--go)}
+
+.done{text-align:center;padding:56px 20px;color:var(--ink2);max-width:52ch;margin-inline:auto}
+.done b{display:block;font-size:21px;font-weight:700;color:var(--ink);letter-spacing:-.025em;margin-bottom:8px}
+
+/* ---------- Tabelle ---------- */
+.tablewrap{overflow-x:auto}
+table.grid{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+.grid th{position:sticky;top:0;background:var(--paper);z-index:2;text-align:left;font-size:11px;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);padding:9px 10px;border-bottom:1px solid var(--line);
+  white-space:nowrap;cursor:pointer;user-select:none}
+.grid th:first-child,.grid td:first-child{padding-left:22px}
+.grid th:last-child,.grid td:last-child{padding-right:22px}
+.grid th .arr{color:var(--accent)}
+.grid td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.grid tbody tr{cursor:pointer}
+.grid tbody tr:hover td{background:var(--hover)}
+.grid tr.pick td{background:var(--accent-soft)}
+.grid tr.off td{color:var(--ink3)}
+.gfirma b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+.gfirma span{color:var(--ink2);font-size:12.5px}
+.gmut{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.late{color:var(--stop);font-weight:600}
+.empty{color:var(--ink2);padding:44px 22px;text-align:center}
+
+/* ---------- Zahlen ---------- */
+.report{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;align-items:start;
+  padding-block:18px 32px;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}
+.panel{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px}
+.panel h3{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.panel.wide{grid-column:1 / -1}
+.meter{display:grid;grid-template-columns:minmax(0,1fr) 110px 48px;gap:10px;align-items:center;padding:5px 0;font-size:13.5px}
+.meter span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter i{display:block;height:7px;border-radius:4px;background:var(--accent)}
+.meter em{font-style:normal;text-align:right;color:var(--ink2);font-variant-numeric:tabular-nums}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;font-size:13.5px}
+.facts dt{color:var(--ink2)} .facts dd{margin:0;overflow-wrap:anywhere}
+.weeks{display:flex;gap:5px;align-items:flex-end;height:92px;margin:22px 0 24px}
+.weeks div{flex:1;background:var(--accent-soft);border-radius:5px 5px 0 0;position:relative;min-height:4px}
+.weeks div.now{background:var(--accent)}
+.weeks div b{position:absolute;top:-19px;left:0;right:0;text-align:center;font-size:11.5px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+.weeks div span{position:absolute;bottom:-21px;left:0;right:0;text-align:center;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+/* ---------- Rechte Spalte ---------- */
+.d-empty{color:var(--ink2);padding:60px 28px;text-align:center}
+.d-head{position:sticky;top:env(safe-area-inset-top,0px);background:var(--surface);z-index:3;border-bottom:1px solid var(--line);
+  padding-block:20px 15px;padding-left:22px;padding-right:max(22px,env(safe-area-inset-right,0px))}
+.d-head h2{font-size:19px;font-weight:700;letter-spacing:-.025em}
+.d-head .ort{color:var(--ink2);font-size:13.5px;margin-top:3px}
+.d-head .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.d-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.d-body{display:flex;flex-direction:column;gap:20px;
+  padding-block:16px 48px;padding-left:22px;padding-right:max(22px,env(safe-area-inset-right,0px))}
+.sec>h4{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);
+  margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.sec>h4 em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink3);font-size:12px}
+.kv{display:grid;grid-template-columns:70px minmax(0,1fr);gap:7px 10px;align-items:center;font-size:14px}
+.kv dt{color:var(--ink2);font-size:13px}
+.kv dd{margin:0;overflow-wrap:anywhere;min-width:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kv .v{user-select:all;min-width:0;overflow-wrap:anywhere}
+.stufen{display:flex;flex-direction:column;gap:5px}
+.sb{display:flex;gap:10px;align-items:center;font-size:13.5px;padding:7px 11px;border-radius:9px;background:var(--surface2)}
+.sb.is{background:var(--accent-soft);font-weight:600;color:var(--accent)}
+.sb.ok{color:var(--ink3)}
+.sb .mk{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;font-size:11px}
+.sb.ok .mk{background:var(--go);border-color:transparent;color:var(--onaccent)}
+.sb.is .mk{border-color:var(--accent)}
+.sb time{margin-left:auto;color:var(--ink3);font-size:12px;font-variant-numeric:tabular-nums}
+.pick4{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.rowi{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.rowi input,.rowi select{background:var(--surface2);border:1px solid transparent;border-radius:9px;padding:7px 10px;min-width:0}
+.d-body textarea,.d-body input[type="text"]{width:100%;background:var(--surface2);border:1px solid transparent;
+  border-radius:10px;padding:10px 12px;resize:vertical;line-height:1.55}
+.d-body textarea{min-height:80px}
+.d-body textarea:focus,.d-body input:focus{border-color:var(--accent);outline:none}
+.hist{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--ink2);max-height:190px;overflow-y:auto}
+.hist div{display:flex;gap:9px}
+.hist time{color:var(--ink3);font-variant-numeric:tabular-nums;flex:none}
+.del{background:none;border:none;color:var(--stop);font-size:13.5px;padding:7px 0;font-weight:500}
+
+/* Hinweis + Formular */
+.toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:99px;font-size:14px;font-weight:500;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:90;max-width:88vw;text-align:center}
+.toast.on{opacity:1}
+.backdrop{position:fixed;inset:0;background:rgba(8,10,14,.42);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  display:flex;align-items:center;justify-content:center;z-index:80;
+  padding:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+.sheet{background:var(--surface);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.35);width:100%;max-width:740px;
+  max-height:88vh;overflow-y:auto;padding:24px}
+.sheet h2{font-size:21px;font-weight:700;letter-spacing:-.025em;margin-bottom:17px}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.form label>span{font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px}
+.form .w2{grid-column:span 2} .form .w3{grid-column:1 / -1}
+.form input,.form select,.form textarea{width:100%;background:var(--surface2);border:1px solid transparent;
+  border-radius:9px;padding:9px 11px;min-width:0}
+.form textarea{min-height:62px;resize:vertical}
+.form input:focus,.form select:focus,.form textarea:focus{border-color:var(--accent);outline:none}
+.sheetacts{display:flex;justify-content:flex-end;gap:9px;margin-top:19px;flex-wrap:wrap}
+
+@media (max-width:1180px){
+  .app{grid-template-columns:214px minmax(0,1fr)}
+  .detail{grid-column:1 / -1;border-left:none;border-top:1px solid var(--line)}
+  body{overflow:auto} .app{height:auto} .main{min-height:58vh}
+  .d-head{position:static} .detail{overflow:visible}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr} .side{border-right:none;border-bottom:1px solid var(--line)}
+  .bar input[type="search"]{width:100%}
+  .form{grid-template-columns:1fr} .form .w2{grid-column:auto}
+  .hide{display:none}
+  .side{gap:12px;padding-block:14px 12px}
+  .kpiwrap,.savebar{display:none}
+  .nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px}
+  .nav button{white-space:nowrap;width:auto;flex:none;gap:7px;padding:7px 12px}
+  .bignum{font-size:21px} .pick4{grid-template-columns:1fr}
+  .c-row{padding:13px 14px} .c-body{padding-inline:14px}
+  .work{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+  .bar{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+  .report{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>Leadtracker</b><span id="today"></span></div>
+    <button class="add" id="addBtn">Kunde hinzufügen <kbd>A</kbd></button>
+    <nav class="nav" id="nav" role="tablist">
+      <button data-tab="heute" aria-selected="true">Heute <span class="cnt hot" id="c-heute"></span></button>
+      <button data-tab="wartet" aria-selected="false">Wartet <span class="cnt" id="c-wartet"></span></button>
+      <button data-tab="alle" aria-selected="false">Alle Kunden <span class="cnt" id="c-alle"></span></button>
+      <button data-tab="zahlen" aria-selected="false">Zahlen <span class="cnt go" id="c-geld"></span></button>
+      <button data-tab="skript" aria-selected="false">Telefon-Skript</button>
+    </nav>
+    <div class="kpiwrap">
+      <div class="sidehead">Überblick</div>
+      <dl class="kpis" id="kpis"></dl>
+    </div>
+    <div class="savebar"><span class="dot" id="dot"></span><span id="savebar">Verbinde …</span></div>
+  </aside>
+
+  <section class="main">
+    <div class="bar">
+      <h1 id="title">Heute</h1>
+      <input id="q" type="search" placeholder="Firma, Ort, Branche …" aria-label="Suchen">
+      <select id="fs" aria-label="Nach Stufe filtern"></select>
+    </div>
+    <div class="scroll" id="view"></div>
+  </section>
+
+  <section class="detail" id="detail"></section>
+</div>
+<div class="toast" id="toast"></div>
+<div id="sheetRoot"></div>
+
+<script>
+/* ============================================================
+   Die Leiter: Mail raus → nach 5 Tagen anrufen → danach vorbeifahren
+   → gewonnen oder raus. Jeder Kunde steht auf genau einer Stufe.
+
+   Felder je Kunde in der Sammlung "leads":
+     firma ort adresse branche ansprechpartner telefon email website
+     angebot wert werttyp potenzial chance chanceGrund aufhaenger ansprache notiz quelle
+     stufe        – neu | mail | anruf | besuch | antwort | termin | angebot | kunde | raus
+     mailBetreff mailText mailAm
+     anrufAm besuchAm letzterKontakt wiedervorlage versuche
+     terminAm terminDauer terminOrt kalenderAm kalenderEventId
+     umsatz umsatzTyp   – bei gewonnenen Kunden
+     favorit historie
+   Sammlung "config", Dokument "app": tagespensum tageBisAnruf tageBisBesuch nachschubSchwelle
+   ============================================================ */
+
+const STUFE = {
+  neu:     {label:"Mail schreiben",  kurz:"neu",       farbe:"b", rang:5},
+  mail:    {label:"Mail ist raus",   kurz:"Mail raus", farbe:"w", rang:4},
+  anruf:   {label:"Angerufen",       kurz:"angerufen", farbe:"w", rang:3},
+  besuch:  {label:"War vor Ort",     kurz:"vor Ort",   farbe:"w", rang:2},
+  antwort: {label:"Hat geantwortet", kurz:"Antwort",   farbe:"g", rang:0},
+  termin:  {label:"Termin steht",    kurz:"Termin",    farbe:"m", rang:1},
+  angebot: {label:"Angebot liegt",   kurz:"Angebot",   farbe:"g", rang:1},
+  kunde:   {label:"Kunde",           kurz:"Kunde",     farbe:"solid", rang:9},
+  raus:    {label:"Kein Interesse",  kurz:"raus",      farbe:"",  rang:9}
+};
+const REIHE = ["neu","mail","anruf","besuch","antwort","termin","angebot","kunde","raus"];
+const ZU = ["kunde","raus"];
+/* Alte Statusnamen auf die neuen Stufen abbilden, damit bestehende Daten weiterlaufen. */
+const ALT = { kontaktiert:"mail", nicht_erreicht:"anruf", spaeter:"anruf", kein_interesse:"raus" };
+const CAL = "Google Calendar";
+const ABSENDER = "Nico Klein";
+
+let leads = [], tab = "heute", pick = null, open = null, db = null, mcp = null;
+let liste = [], fq = "", fs = "alle", sortKey = "firma", sortDir = 1;
+let armDel = false, calBusy = false, calMsg = null, edit = null;
+let cfg = { tagespensum: 5, tageBisAnruf: 5, tageBisBesuch: 5, nachschubSchwelle: 10 };
+
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const heute = () => iso(new Date());
+const plus = n => { const d = new Date(); d.setDate(d.getDate()+n); return iso(d); };
+const tage = (a,b) => !a ? 0 : Math.round((new Date(b||heute()) - new Date(a))/86400000);
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const dk = s => s ? s.slice(8,10)+"."+s.slice(5,7)+"." : "";
+const dl = s => s ? s.slice(8,10)+"."+s.slice(5,7)+"."+s.slice(0,4) : "";
+const toast = m => { const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),2100); };
+const fmtT = t => { if(!t) return ""; const d = new Date(t);
+  return d.toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"})
+    + (t.length>10 ? ", "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+" Uhr" : ""); };
+const slug = s => s.toLowerCase().replace(/[äöüß]/g,c=>({"ä":"ae","ö":"oe","ü":"ue","ß":"ss"}[c]))
+  .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60);
+const web = w => { const u=(w||"").trim().split(/\s/)[0]; return !u ? "" : /^https?:\/\//.test(u) ? u : "https://"+u; };
+const webk = w => web(w).replace(/^https?:\/\/(www\.)?/,"").replace(/\/$/,"");
+const eur = n => Math.round(n||0).toLocaleString("de-DE")+" €";
+const geld = l => l.wert ? l.wert.toLocaleString("de-DE")+" €"+(l.werttyp==="monatlich"?" / Monat":"") : "";
+const erw = l => Math.round((l.potenzial||0)*(l.chance||0)/100);
+const offen = () => leads.filter(l => !ZU.includes(l.stufe));
+const byId = id => leads.find(l=>l.id===id);
+const akt = () => byId(pick);
+const maps = l => "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([l.firma,l.adresse||l.ort].filter(Boolean).join(" "));
+const gmail = l => "https://mail.google.com/mail/?"+new URLSearchParams({view:"cm",fs:"1",to:l.email||"",su:l.mailBetreff||"",body:l.mailText||""});
+const umsatzSumme = () => leads.filter(l=>l.stufe==="kunde").reduce((a,l)=>a+(l.umsatz||0),0);
+
+/* Was ist bei diesem Kunden als Nächstes dran, und ist es heute fällig? */
+function faellig(l){
+  if(ZU.includes(l.stufe)) return null;
+  if(l.stufe==="antwort") return {tun:"antwort", seit:tage(l.letzterKontakt)};
+  if(l.stufe==="termin")  return l.terminAm ? {tun:"termin", seit:0} : {tun:"anrufen", seit:0};
+  if(l.stufe==="angebot") return tage(l.letzterKontakt) >= 7 ? {tun:"nachfassen", seit:tage(l.letzterKontakt)} : null;
+  if(l.stufe==="neu")     return {tun:"mailen", seit:0};
+  if(l.stufe==="mail"){
+    const d = tage(l.mailAm);
+    return d >= cfg.tageBisAnruf ? {tun:"anrufen", seit:d} : null;
+  }
+  if(l.stufe==="anruf"){
+    const d = tage(l.anrufAm || l.letzterKontakt);
+    if((l.versuche||0) < 2 && d >= 3) return {tun:"anrufen", seit:d};
+    return d >= cfg.tageBisBesuch ? {tun:"vorbei", seit:d} : null;
+  }
+  if(l.stufe==="besuch"){
+    const d = tage(l.besuchAm);
+    return d >= 14 ? {tun:"nachfassen", seit:d} : null;
+  }
+  return null;
+}
+const TUN = {
+  antwort:    {titel:"Hat geantwortet", kl:"go",   hint:"Zuerst dran. Hier ist schon Interesse da, das darf nicht liegen bleiben."},
+  termin:     {titel:"Termine",         kl:"mark", hint:""},
+  mailen:     {titel:"Mail rausschicken", kl:"",   hint:"Text lesen, kopieren, in Gmail einfügen, abschicken. Dann hier auf „Mail ist raus“."},
+  anrufen:    {titel:"Anrufen",         kl:"stop", hint:"Keine Antwort auf die Mail. Jetzt anrufen — das Skript steht auf der Karte."},
+  vorbei:     {titel:"Vorbeifahren",    kl:"wait", hint:"Mail und Anruf ohne Reaktion. Wenn du in der Nähe bist, einmal reingehen."},
+  nachfassen: {titel:"Nachfassen",      kl:"wait", hint:""}
+};
+const TUNREIHE = ["antwort","termin","anrufen","mailen","vorbei","nachfassen"];
+
+/* ---------- Speichern ---------- */
+async function save(l, patch){
+  Object.assign(l, patch); render();
+  if(!db) return;
+  try { await db.doc("leads/"+l.id).update(patch); }
+  catch(e){ toast("Nicht gespeichert: "+(e.code||e.message)); }
+}
+const log = (l, t) => [...(l.historie||[]), heute()+" "+t].slice(-40);
+async function saveCfg(patch){
+  Object.assign(cfg, patch); render();
+  if(db) try { await db.doc("config/app").set({...cfg}); } catch(e){ toast("Einstellung nicht gespeichert"); }
+}
+
+function setStufe(l, s, extra){
+  const p = { stufe: s, letzterKontakt: heute(), historie: log(l, STUFE[s].label), ...(extra||{}) };
+  if(s==="mail"){ p.mailAm = heute(); p.wiedervorlage = plus(cfg.tageBisAnruf); }
+  if(s==="anruf"){ p.anrufAm = heute(); p.versuche = (l.versuche||0)+1; p.wiedervorlage = plus(cfg.tageBisBesuch); }
+  if(s==="besuch"){ p.besuchAm = heute(); p.wiedervorlage = plus(14); }
+  if(s==="antwort"){ p.wiedervorlage = heute(); }
+  if(s==="angebot"){ p.wiedervorlage = plus(7); if((l.chance||0)<25) p.chance = 25; }
+  if(s==="termin" && (l.chance||0)<15) p.chance = 15;
+  if(s==="kunde"){ p.chance = 100; p.wiedervorlage = ""; }
+  if(s==="raus"){ p.chance = 0; p.wiedervorlage = ""; }
+  save(l, p);
+  toast(l.firma+" · "+STUFE[s].label);
+}
+
+/* ---------- Telefon-Skript, auf den Kunden gemünzt ---------- */
+function art(l){
+  const t = ((l.angebot||"")+" "+(l.branche||"")).toLowerCase();
+  if(/fahrzeug|auto|kfz|gebrauchtwagen|autohaus|autohandel/.test(t)) return "auto";
+  if(/recruiting|bewerber|azubi|stellen/.test(t)) return "recruiting";
+  if(/website|webseite|seite/.test(t)) return "website";
+  return "imagefilm";
+}
+const FRAGE = {
+  auto: "Wie lange stehen Ihre Autos im Schnitt, bis sie weg sind?",
+  recruiting: "Wie läuft es bei Ihnen gerade mit Bewerbern?",
+  website: "Wo kommen Ihre Kunden im Moment her — über die Seite oder eher über Empfehlung?",
+  imagefilm: "Wie finden Ihre Kunden Sie gerade — Empfehlung, oder suchen die online?"
+};
+const GRATIS = {
+  auto: "Ich komme einmal vorbei und filme Ihnen ein Fahrzeug komplett kostenlos",
+  recruiting: "Ich komme auf eine Baustelle und drehe Ihnen kostenlos ein kurzes Stück mit Ihren Leuten",
+  website: "Ich schicke Ihnen einen Entwurf, wie die Seite mit Ihrem Bestand aussehen würde, kostenlos",
+  imagefilm: "Ich komme einmal vorbei und filme kostenlos ein Stück Ihrer Arbeit"
+};
+function skript(l){
+  const a = art(l);
+  const herr = l.ansprechpartner ? ("Herr "+l.ansprechpartner.split(" ").slice(-1)[0]) : "Guten Tag";
+  return [
+    { t:"Wer abnimmt", q:"Guten Tag, "+ABSENDER+" hier. Ist "+(l.ansprechpartner?herr:"der Chef")+" zu sprechen?",
+      p:"Wenn gefragt wird worum es geht: „Um die Außendarstellung, ich hab eine konkrete Sache auf der Website gesehen. Zwei Minuten reichen.“ Wenn er nicht da ist: fragen, wann du ihn erreichst, und den Tag hier eintragen." },
+    { t:"Die ersten zehn Sekunden", q:herr+", "+ABSENDER+", ich mache Video und Foto hier aus Gießen. Ich brauche zwei Minuten — passt das gerade, oder ruf ich später nochmal an?",
+      p:"Dann wirklich warten. Das Ja holt dich aus der Verkäufer-Schublade raus." },
+    { t:"Warum du anrufst", q:(l.aufhaenger ? "Ich war auf Ihrer Seite, und mir ist aufgefallen: "+kurzAufhaenger(l) : "Ich war auf Ihrer Seite und hab mir angeschaut, wie Sie sich zeigen."),
+      p:"Das ist dein Aufhänger für genau diesen Betrieb, kein Verkaufsspruch. Deswegen funktioniert er." },
+    { t:"Eine Frage, dann Mund zu", q:FRAGE[a],
+      p:"Zwanzig Sekunden nur zuhören. Nicht reinreden, nicht ergänzen. Was er hier sagt, ist dein Angebot." },
+    { t:"Der Vorschlag", q:GRATIS[a]+". Sie sehen das Ergebnis, und dann entscheiden Sie, ob das was für Sie ist. Kostet Sie eine halbe Stunde.",
+      p:"Kostenlos ist hier kein Rabatt, sondern dein Portfolio. Du brauchst die Referenz genauso wie er das Video." },
+    { t:"Nie offen lassen", q:"Passt Ihnen Dienstag oder Donnerstag besser?",
+      p:"Immer zwei Termine zur Auswahl. Niemals „melden Sie sich mal“ — dann meldet sich keiner." }
+  ];
+}
+function kurzAufhaenger(l){
+  const s = (l.aufhaenger||"").trim();
+  const erste = s.split(/(?<=[.!?])\s/)[0] || s;
+  return erste.length > 190 ? erste.slice(0,187).trim()+" …" : erste;
+}
+const EINWAENDE = [
+  { e:"Kein Interesse.", a:"Verstehe. Darf ich kurz fragen — machen Sie das schon mit jemandem, oder ist Video für Sie generell kein Thema?",
+    p:"Die Antwort sagt dir, ob du in sechs Monaten nochmal anrufst oder ihn rausnimmst." },
+  { e:"Was kostet das denn?", a:"Ein einzelnes Fahrzeugvideo liegt bei 120 Euro, monatlich bei 450. Ein Imagefilm bei 1.900. Aber das erste Video ist kostenlos, da müssen Sie noch nichts entscheiden.",
+    p:"Preis nie verstecken und nie als Erstes nennen. Direkt danach zurück aufs kostenlose Erste." },
+  { e:"Schicken Sie mal was per Mail.", a:"Mach ich gern. Damit ich nicht irgendwas schicke: worauf kommt es Ihnen an — Bewerber finden oder verkaufen?",
+    p:"Das ist meistens ein höfliches Nein. Mail trotzdem schicken und hier eine Wiedervorlage auf fünf Tage setzen." },
+  { e:"Keine Zeit gerade.", a:"Klar. Wann passt besser — morgen früh, oder eher nachmittags?",
+    p:"Nicht auflegen ohne neuen Zeitpunkt. Ein Termin fürs Telefonat ist auch ein Termin." },
+  { e:"Das machen wir selbst mit dem Handy.", a:"Besser als nichts, ehrlich. Der Unterschied liegt bei Licht und Schnitt — darf ich Ihnen das einmal an einem Beispiel zeigen, kostenlos?",
+    p:"Nie das Handy schlechtmachen. Er hat ja recht, dass er überhaupt was macht." },
+  { e:"Wie alt sind Sie denn?", a:"Einundzwanzig. Ich mache das seit fünf Jahren, unter anderem drei Jahre beim Gießener Kultursommer. Schauen Sie sich einfach das kostenlose Video an, dann sehen Sie es selbst.",
+    p:"Kurz, sachlich, Beleg, und direkt zurück zum Angebot. Nicht rechtfertigen." }
+];
+
+/* ---------- Arbeitsliste ---------- */
+function passt(l){
+  if(fs!=="alle" && l.stufe!==fs) return false;
+  if(!fq) return true;
+  return (l.firma+" "+l.ort+" "+l.branche+" "+l.angebot+" "+l.ansprechpartner+" "+l.aufhaenger+" "+l.notiz)
+    .toLowerCase().includes(fq.toLowerCase());
+}
+function tagesPlan(){
+  const g = {}; TUNREIHE.forEach(k => g[k] = []);
+  offen().filter(passt).forEach(l => { const f = faellig(l); if(f) g[f.tun].push({l, seit:f.seit}); });
+  g.anrufen.sort((a,b)=>b.seit-a.seit || erw(b.l)-erw(a.l));
+  g.vorbei.sort((a,b)=>b.seit-a.seit);
+  g.nachfassen.sort((a,b)=>b.seit-a.seit);
+  g.antwort.sort((a,b)=>b.seit-a.seit);
+  g.termin.sort((a,b)=>(a.l.terminAm||"").localeCompare(b.l.terminAm||""));
+  g.mailen.sort((a,b)=>(b.l.favorit-a.l.favorit) || erw(b.l)-erw(a.l));
+  /* Mails aufs Tagespensum begrenzen, damit die Liste nicht erschlägt. */
+  const kappe = Math.max(1, cfg.tagespensum);
+  const mehr = Math.max(0, g.mailen.length - kappe);
+  g.mailen = g.mailen.slice(0, kappe);
+  return { g, mehrMails: mehr };
+}
+function viewHeute(){
+  const { g, mehrMails } = tagesPlan();
+  liste = TUNREIHE.flatMap(k => g[k].map(x=>x.l));
+  if(!liste.length){
+    const o = offen().length;
+    return `<div class="work"><div class="done"><b>Für heute ist alles abgearbeitet.</b>
+      ${o < cfg.nachschubSchwelle
+        ? "Nur noch "+o+" Kunden offen. Der Agent recherchiert beim nächsten Lauf neue Betriebe und legt die Mailtexte dazu."
+        : "Die wartenden Kunden stehen unter „Wartet“. Morgen ist der Nächste fällig."}</div></div>`;
+  }
+  let h = `<div class="work">`;
+  for(const k of TUNREIHE){
+    const rows = g[k]; if(!rows.length) continue;
+    const t = TUN[k];
+    h += `<div class="grouphead ${t.kl}"><h2>${t.titel}</h2><em>${rows.length}${k==="mailen"&&mehrMails?" von "+(rows.length+mehrMails):""}</em></div>`;
+    if(t.hint) h += `<p class="hint">${t.hint}</p>`;
+    h += rows.map(({l,seit},i) => karte(l, k, i+1, seit)).join("");
+    if(k==="mailen" && mehrMails)
+      h += `<p class="hint">Noch ${mehrMails} weitere warten auf ihre erste Mail. Tagespensum stehen auf ${cfg.tagespensum} — unter Zahlen änderbar.</p>`;
+  }
+  return h + `</div>`;
+}
+function viewWartet(){
+  const rows = offen().filter(l => !faellig(l) && passt(l))
+    .sort((a,b)=>(a.wiedervorlage||"9").localeCompare(b.wiedervorlage||"9"));
+  liste = rows;
+  if(!rows.length) return `<div class="work"><div class="done"><b>Nichts in der Warteschlange.</b>Alles was offen ist, ist heute fällig.</div></div>`;
+  return `<div class="work">
+    <div class="grouphead"><h2>Wartet auf den nächsten Schritt</h2><em>${rows.length}</em></div>
+    <p class="hint">Hier musst du nichts tun. Die Kunden rutschen von allein nach „Heute“, sobald die Zeit um ist.</p>
+    ${rows.map((l,i)=>karte(l, null, i+1, 0)).join("")}</div>`;
+}
+
+function karte(l, tun, nr, seit){
+  const auf = open===l.id;
+  const st = STUFE[l.stufe];
+  const warten = l.stufe==="mail" ? Math.max(0, cfg.tageBisAnruf - tage(l.mailAm))
+               : l.stufe==="anruf" ? Math.max(0, cfg.tageBisBesuch - tage(l.anrufAm||l.letzterKontakt)) : 0;
+  return `<article class="c ${auf?"open":""} ${l.id===pick?"pick":""}" data-id="${esc(l.id)}">
+    <button class="c-row" data-act="toggle" aria-expanded="${auf}">
+      <span class="c-n">${nr}</span>
+      <span class="c-mid">
+        <b>${l.favorit?"★ ":""}${esc(l.firma)}</b>
+        <span>${esc(l.ort)}${l.branche?" · "+esc(l.branche):""}${l.angebot?" · "+esc(l.angebot):""}</span>
+      </span>
+      <span class="c-right">
+        ${seit>0 ? `<span class="tag r">${seit} Tage</span>` : ""}
+        ${warten>0 ? `<span class="tag w">in ${warten} ${warten===1?"Tag":"Tagen"}</span>` : ""}
+        ${l.stufe==="termin"&&l.terminAm ? `<span class="tag m">${esc(fmtT(l.terminAm))}</span>` : ""}
+        <span class="tag ${st.farbe} hide">${st.kurz}</span>
+      </span>
+    </button>
+    ${auf ? `<div class="c-body">${koerper(l, tun)}</div>` : ""}
+  </article>`;
+}
+function koerper(l, tun){
+  const t = tun || (faellig(l)||{}).tun || naechsterSchritt(l);
+  if(t==="mailen")  return mailBlock(l);
+  if(t==="anrufen" || t==="termin") return anrufBlock(l, t);
+  if(t==="vorbei")  return besuchBlock(l);
+  if(t==="antwort") return antwortBlock(l);
+  return mailBlock(l);
+}
+const naechsterSchritt = l => l.stufe==="neu" ? "mailen" : l.stufe==="mail" ? "anrufen" : l.stufe==="anruf" ? "vorbei" : "anrufen";
+
+function mailBlock(l){
+  const bearbeitet = edit===l.id;
+  const kein = !(l.mailText||"").trim();
+  return `
+    ${l.aufhaenger?`<div class="why"><b>Warum dieser Betrieb</b><p>${esc(l.aufhaenger)}</p></div>`:""}
+    <div class="block">
+      <h3>Empfänger</h3>
+      <dl class="kv">
+        <dt>An</dt><dd>${l.email?`<span class="v bigmail">${esc(l.email)}</span><button class="btn sm q" data-act="copymail">Kopieren</button>`:`<span style="color:var(--ink3)">keine Adresse — unter Bearbeiten nachtragen</span>`}</dd>
+        ${l.ansprechpartner?`<dt>Person</dt><dd><span class="v">${esc(l.ansprechpartner)}</span></dd>`:""}
+      </dl>
+    </div>
+    ${kein ? `<div class="tip w"><b>Noch kein Text.</b> Der Agent schreibt beim nächsten Morgenlauf einen, oder du schreibst ihn selbst über „Text schreiben“.</div>
+      <div class="acts"><button class="btn pri" data-act="mailedit">Text schreiben</button></div>`
+    : bearbeitet ? `
+      <div class="block"><h3>Betreff</h3><input class="editsubj" id="ed-subj" value="${esc(l.mailBetreff)}"></div>
+      <div class="block"><h3>Text</h3><textarea class="editbody" id="ed-body">${esc(l.mailText)}</textarea></div>
+      <div class="acts"><button class="btn pri" data-act="mailsave">Übernehmen</button>
+        <button class="btn q" data-act="mailcancel">Abbrechen</button></div>`
+    : `
+      <div class="block"><h3>Betreff</h3><div class="subj">${esc(l.mailBetreff)||"—"}</div></div>
+      <div class="block"><h3>Text</h3><div class="mailtext">${esc(l.mailText)}</div></div>
+      <div class="acts">
+        <span class="lbl">Erst kopieren und in Gmail abschicken, dann hier bestätigen</span>
+        <button class="btn pri" data-act="mailcopy">Text kopieren</button>
+        <a class="btn" href="${esc(gmail(l))}" target="_blank" rel="noopener">In Gmail öffnen</a>
+        <button class="btn q" data-act="mailedit">Ändern</button>
+        <button class="btn good" data-act="mailraus">Mail ist raus ✓</button>
+      </div>
+      <div class="acts" style="border-top:none;padding-top:0">
+        <button class="btn g sm" data-act="antwort">Hat geantwortet</button>
+        <button class="btn r sm" data-act="raus">Kein Interesse</button>
+      </div>`}`;
+}
+function anrufBlock(l, t){
+  const s = skript(l);
+  return `
+    ${t==="termin"&&l.terminAm?`<div class="tip"><b>Termin:</b> ${esc(fmtT(l.terminAm))}${l.terminOrt?" · "+esc(l.terminOrt):""}</div>`:""}
+    ${l.mailAm?`<div class="tip w"><b>Mail ging am ${esc(dl(l.mailAm))} raus</b> und blieb ${tage(l.mailAm)} Tage unbeantwortet.${(l.versuche||0)?" Bisher "+l.versuche+" Anrufversuch"+(l.versuche>1?"e":"")+".":""}</div>`:""}
+    <div class="block">
+      <h3>Nummer</h3>
+      <div class="big">
+        ${l.telefon?`<span class="bignum">${esc(l.telefon)}</span>
+          <button class="btn sm" data-act="copytel">Kopieren</button>`
+        :`<span style="color:var(--ink3)">Keine Nummer hinterlegt.</span>`}
+        ${web(l.website)?`<a class="btn sm q" href="${esc(web(l.website))}" target="_blank" rel="noopener">Website</a>`:""}
+      </div>
+    </div>
+    <div class="block">
+      <h3>Was du sagst</h3>
+      <div class="steps">
+        ${s.map((x,i)=>`<div class="step"><i>${i+1}</i><div><em>${esc(x.t)}</em><q>${esc(x.q)}</q><p>${esc(x.p)}</p></div></div>`).join("")}
+      </div>
+    </div>
+    <details class="obj"><summary>Wenn er einen dieser Sätze bringt<span></span></summary>
+      <div class="objs">${EINWAENDE.map(o=>`<div><strong>„${esc(o.e)}“</strong><q>${esc(o.a)}</q><p>${esc(o.p)}</p></div>`).join("")}</div>
+    </details>
+    <div class="acts">
+      <span class="lbl">Wie ist es gelaufen?</span>
+      <button class="btn m" data-act="termin">Termin gemacht</button>
+      <button class="btn g" data-act="angebot">Angebot raus</button>
+      <button class="btn good" data-act="kunde">Kunde ✓</button>
+      <button class="btn w" data-act="anruf">Nicht erreicht</button>
+      <button class="btn q" data-act="spaeter">Später nochmal</button>
+      <button class="btn r" data-act="raus">Kein Interesse</button>
+    </div>`;
+}
+function besuchBlock(l){
+  return `
+    <div class="tip w"><b>Mail und Anruf ohne Reaktion.</b> ${l.mailAm?"Mail am "+esc(dl(l.mailAm))+", ":""}${(l.versuche||0)?l.versuche+" Anrufversuch"+(l.versuche>1?"e":"")+". ":""}Wenn du mal in der Gegend bist: reingehen, nach dem Chef fragen, Visitenkarte und ein Satz.</div>
+    <div class="block">
+      <h3>Adresse</h3>
+      <div class="big">
+        <span class="v bigmail">${esc(l.adresse || l.ort)}</span>
+        <a class="btn sm" href="${esc(maps(l))}" target="_blank" rel="noopener">In Maps öffnen</a>
+      </div>
+    </div>
+    ${l.aufhaenger?`<div class="why"><b>Dein Satz an der Theke</b><p>${esc(kurzAufhaenger(l))} — deshalb bin ich reingekommen.</p></div>`:""}
+    <div class="block"><h3>Nummer, falls du es vorher noch probierst</h3>
+      <div class="big">${l.telefon?`<span class="bignum">${esc(l.telefon)}</span><button class="btn sm" data-act="copytel">Kopieren</button>`:`<span style="color:var(--ink3)">keine</span>`}</div></div>
+    <div class="acts">
+      <span class="lbl">Nach dem Besuch</span>
+      <button class="btn" data-act="besuch">War da, nichts Konkretes</button>
+      <button class="btn m" data-act="termin">Termin gemacht</button>
+      <button class="btn good" data-act="kunde">Kunde ✓</button>
+      <button class="btn r" data-act="raus">Kein Interesse</button>
+    </div>`;
+}
+function antwortBlock(l){
+  return `
+    <div class="tip g"><b>Der hat sich gemeldet.</b> Das ist der wertvollste Kunde in der Liste. Heute antworten, nicht morgen.</div>
+    ${l.notiz?`<div class="why"><b>Deine Notiz</b><p>${esc(l.notiz)}</p></div>`:""}
+    <div class="block"><h3>Kontakt</h3><dl class="kv">
+      ${l.telefon?`<dt>Telefon</dt><dd><span class="v bignum" style="font-size:19px">${esc(l.telefon)}</span><button class="btn sm q" data-act="copytel">Kopieren</button></dd>`:""}
+      ${l.email?`<dt>Mail</dt><dd><span class="v bigmail">${esc(l.email)}</span><button class="btn sm q" data-act="copymail">Kopieren</button></dd>`:""}
+    </dl></div>
+    <div class="acts">
+      <span class="lbl">Was draus geworden ist</span>
+      <button class="btn m" data-act="termin">Termin gemacht</button>
+      <button class="btn g" data-act="angebot">Angebot raus</button>
+      <button class="btn good" data-act="kunde">Kunde ✓</button>
+      <button class="btn r" data-act="raus">Doch nichts</button>
+    </div>`;
+}
+
+/* ---------- Alle Kunden ---------- */
+const COLS = [["firma","Firma"],["branche","Branche"],["angebot","Angebot"],["stufe","Stufe"],
+  ["wiedervorlage","Nächster Schritt"],["versuche","Vers."],["telefon","Telefon"]];
+function viewAlle(){
+  const rows = leads.filter(passt).sort((a,b)=>{
+    if(sortKey==="versuche") return ((a.versuche||0)-(b.versuche||0))*sortDir;
+    if(sortKey==="stufe") return (STUFE[a.stufe].rang-STUFE[b.stufe].rang)*sortDir;
+    const x=String(a[sortKey]||""), y=String(b[sortKey]||"");
+    if(!x&&y) return 1; if(x&&!y) return -1;
+    return x.localeCompare(y,"de")*sortDir;
+  });
+  liste = rows;
+  if(!rows.length) return `<div class="empty">${fq||fs!=="alle"?"Keine Treffer für diesen Filter.":"Noch keine Kunden. Leg mit „Kunde hinzufügen“ den ersten an."}</div>`;
+  const head = COLS.map(([k,t],i)=>`<th data-sort="${k}" class="${i>0&&i!==3?"hide":""}">${t}${sortKey===k?` <span class="arr">${sortDir>0?"↑":"↓"}</span>`:""}</th>`).join("");
+  const body = rows.map(l=>{
+    const f = faellig(l), st = STUFE[l.stufe], zu = ZU.includes(l.stufe);
+    return `<tr data-id="${esc(l.id)}" class="${l.id===pick?"pick":""} ${zu?"off":""}">
+      <td class="gfirma"><b>${l.favorit?"★ ":""}${esc(l.firma)}</b><span>${esc(l.ort)}${l.ansprechpartner?" · "+esc(l.ansprechpartner):""}</span></td>
+      <td class="gmut hide">${esc(l.branche)}</td>
+      <td class="gmut hide">${esc(l.angebot)}${l.stufe==="kunde"&&l.umsatz?` · <b style="color:var(--go)">${esc(eur(l.umsatz))}</b>`:""}</td>
+      <td><span class="tag ${st.farbe}">${st.kurz}</span></td>
+      <td class="hide tnum" style="white-space:nowrap">${zu?"—":f?`<span class="late">${TUN[f.tun].titel}${f.seit?" · "+f.seit+" T":""}</span>`:esc(dk(l.wiedervorlage))||"—"}</td>
+      <td class="hide tnum" style="color:var(--ink2)">${l.versuche||"—"}</td>
+      <td class="hide num" style="white-space:nowrap">${esc(l.telefon)}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="tablewrap"><table class="grid"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ---------- Zahlen ---------- */
+function viewZahlen(){
+  liste = [];
+  const o = offen();
+  const kunden = leads.filter(l=>l.stufe==="kunde");
+  const mails = leads.filter(l=>l.mailAm).length;
+  const angerufen = leads.filter(l=>(l.versuche||0)>0).length;
+  const reagiert = leads.filter(l=>["antwort","termin","angebot","kunde"].includes(l.stufe)).length;
+
+  const wk = {}; const jetzt = new Date();
+  for(let i=7;i>=0;i--){ const d=new Date(jetzt); d.setDate(d.getDate()-i*7); wk[montag(d)]=0; }
+  leads.forEach(l => (l.historie||[]).forEach(e=>{
+    const d=e.slice(0,10); if(!/^\d{4}-\d\d-\d\d$/.test(d)) return;
+    const k=montag(new Date(d)); if(k in wk) wk[k]++;
+  }));
+  const wa = Object.entries(wk), wmax = Math.max(1,...wa.map(r=>r[1]));
+  const diese = wa[wa.length-1][1], letzte = wa[wa.length-2][1];
+
+  const liegt = o.filter(l=>{ const f=faellig(l); return f && f.seit>=14; }).sort((a,b)=>faellig(b).seit-faellig(a).seit);
+  const nieMail = o.filter(l=>l.stufe==="neu");
+  const balken = (rows,farbe) => { const m=Math.max(1,...rows.map(r=>r[1]));
+    return rows.map(([k,v])=>`<div class="meter"><span title="${esc(k)}">${esc(k)}</span><i style="width:${Math.round(v/m*100)}%${farbe?";background:"+farbe:""}"></i><em>${typeof v==="number"?v:esc(v)}</em></div>`).join(""); };
+  const nach = key => { const m={}; leads.forEach(l=>{const k=(l[key]||"–").split(" (")[0]; m[k]=(m[k]||0)+1;});
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10); };
+
+  return `<div class="report">
+    <div class="panel wide"><h3>Was du gemacht hast</h3>
+      <div class="facts">
+        <dt>Diese Woche</dt><dd class="tnum"><b style="font-size:17px">${diese}</b> Schritte</dd>
+        <dt>Letzte Woche</dt><dd class="tnum">${letzte} Schritte</dd>
+      </div>
+      <div class="weeks">${wa.map(([k,v],i)=>`<div class="${i===wa.length-1?"now":""}" style="height:${Math.max(4,Math.round(v/wmax*100))}%"><b>${v||""}</b><span>${k.slice(8,10)}.${k.slice(5,7)}.</span></div>`).join("")}</div>
+      <div class="facts">
+        <dt>Mails raus</dt><dd class="tnum">${mails} von ${leads.length}</dd>
+        <dt>Angerufen</dt><dd class="tnum">${angerufen}</dd>
+        <dt>Haben reagiert</dt><dd class="tnum">${reagiert}${mails?" · "+Math.round(reagiert/mails*100)+" % der Mails":""}</dd>
+      </div>
+    </div>
+
+    <div class="panel"><h3>Umsatz gewonnen</h3><div class="facts">
+      <dt>Kunden</dt><dd class="tnum"><b style="font-size:19px;color:var(--go)">${kunden.length}</b></dd>
+      <dt>Summe</dt><dd class="tnum"><b style="font-size:17px">${eur(umsatzSumme())}</b></dd>
+      ${kunden.length?kunden.map(l=>`<dt style="font-weight:500;color:var(--ink)">${esc(l.firma)}</dt><dd class="tnum">${esc(eur(l.umsatz))}${l.umsatzTyp==="monatlich"?" / Monat":""}</dd>`).join(""):`<dt>—</dt><dd>Noch keiner geschlossen.</dd>`}
+    </div></div>
+
+    <div class="panel"><h3>Erwartet, vorsichtig gerechnet</h3><div class="facts">
+      <dt>In zwei Monaten</dt><dd class="tnum"><b style="font-size:17px">${eur(o.reduce((a,l)=>a+erw(l),0))}</b></dd>
+      <dt>Wenn alle zusagen</dt><dd class="tnum">${eur(o.reduce((a,l)=>a+(l.potenzial||0),0))}</dd>
+      <dt>Rechnung</dt><dd>Chance × kleinster realistischer Auftrag. Monatsabos nur mit einem Monat.</dd>
+    </div></div>
+
+    ${liegt.length?`<div class="panel wide" style="background:var(--stop-soft)"><h3 style="color:var(--stop)">Liegengeblieben · ${liegt.length}</h3>
+      ${balken(liegt.slice(0,8).map(l=>[l.firma, faellig(l).seit]), "var(--stop)")}
+      <p style="font-size:13px;color:var(--ink2);margin-top:10px">Mehr als zwei Wochen überfällig. Je älter, desto kälter.</p></div>`:""}
+
+    ${nieMail.length?`<div class="panel"><h3>Noch keine Mail raus · ${nieMail.length}</h3><div class="facts">
+      <dt>Potenzial</dt><dd class="tnum"><b>${eur(nieMail.reduce((a,l)=>a+(l.potenzial||0),0))}</b></dd>
+      <dt>davon erwartet</dt><dd class="tnum">${eur(nieMail.reduce((a,l)=>a+erw(l),0))}</dd></div></div>`:""}
+
+    <div class="panel"><h3>Wo alle stehen</h3>${balken(REIHE.map(s=>[STUFE[s].label, leads.filter(l=>l.stufe===s).length]).filter(r=>r[1]))}</div>
+    <div class="panel"><h3>Nach Angebot</h3>${balken(nach("angebot"))}</div>
+    <div class="panel"><h3>Nach Ort</h3>${balken(nach("ort"))}</div>
+    <div class="panel"><h3>Nach Branche</h3>${balken(nach("branche"))}</div>
+
+    <div class="panel wide"><h3>Automatik</h3>
+      <div class="rowi" style="gap:14px">
+        <label class="rowi">Mails pro Tag <input type="number" id="cf-p" min="1" max="30" value="${cfg.tagespensum}" style="width:66px"></label>
+        <label class="rowi">Anrufen nach <input type="number" id="cf-a" min="1" max="30" value="${cfg.tageBisAnruf}" style="width:66px"> Tagen</label>
+        <label class="rowi">Vorbeifahren nach <input type="number" id="cf-b" min="1" max="60" value="${cfg.tageBisBesuch}" style="width:66px"> Tagen</label>
+        <label class="rowi">Nachschub unter <input type="number" id="cf-n" min="0" max="200" value="${cfg.nachschubSchwelle}" style="width:66px"> Kunden</label>
+      </div>
+      <p style="font-size:13px;color:var(--ink2);margin-top:11px">So viele neue Mails legt dir die App pro Tag vor. Danach rutscht jeder Kunde von allein eine Stufe weiter, wenn keine Antwort kommt. Aktuell offen: <b>${o.length}</b>.</p>
+    </div>
+  </div>`;
+}
+function montag(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return iso(x); }
+
+/* ---------- Telefon-Skript als eigene Seite ---------- */
+function viewSkript(){
+  liste = [];
+  const bsp = akt() || offen().find(l=>l.telefon) || leads[0];
+  return `<div class="work">
+    <div class="grouphead"><h2>Bevor du wählst</h2></div>
+    <div class="c"><div class="c-body" style="border-top:none;margin-top:0;padding-top:16px">
+      <div class="tip"><b>Die einzige Regel, die zählt:</b> fünf Anrufe am Stück, dann Pause. Nicht achtunddreißig auf einmal. Beim ersten Mal wird es schlecht, beim zehnten nicht mehr — und dazwischen passiert nichts Schlimmes.</div>
+      <div class="block"><h3>Rahmen</h3><div class="steps">
+        <div class="step"><i>·</i><div><em>Wann</em><q>Dienstag bis Donnerstag, 8 bis 10 Uhr oder 14 bis 16 Uhr.</q><p>Montag früh und Freitag nachmittag erreicht du niemanden, der entscheidet.</p></div></div>
+        <div class="step"><i>·</i><div><em>Wie</em><q>Im Stehen telefonieren, Zettel mit dem Aufhänger vor dir.</q><p>Klingt wacher und du redest automatisch langsamer.</p></div></div>
+        <div class="step"><i>·</i><div><em>Nach einem Nein</em><q>Direkt die nächste Nummer wählen.</q><p>Nicht nachdenken, nicht auswerten. Das Nein gehört zum Handwerk, nicht zu dir.</p></div></div>
+        <div class="step"><i>·</i><div><em>Ziel pro Anruf</em><q>Nicht der Auftrag. Ein Termin oder ein klares Nein.</q><p>Beides ist ein Erfolg. Nur das „melden Sie sich mal“ ist keiner.</p></div></div>
+      </div></div>
+    </div></div>
+
+    ${bsp?`<div class="grouphead"><h2>Skript am Beispiel ${esc(bsp.firma)}</h2><em>passt sich pro Kunde an</em></div>
+    <div class="c"><div class="c-body" style="border-top:none;margin-top:0;padding-top:16px">
+      <div class="block"><div class="steps">
+        ${skript(bsp).map((x,i)=>`<div class="step"><i>${i+1}</i><div><em>${esc(x.t)}</em><q>${esc(x.q)}</q><p>${esc(x.p)}</p></div></div>`).join("")}
+      </div></div>
+    </div></div>`:""}
+
+    <div class="grouphead"><h2>Einwände</h2><em>${EINWAENDE.length}</em></div>
+    <p class="hint">Das sind die Sätze, die dich sonst aus dem Konzept bringen. Einmal durchlesen reicht, dann hast du eine Antwort parat.</p>
+    <div class="c"><div class="c-body" style="border-top:none;margin-top:0;padding-top:16px">
+      <div class="objs" style="padding:0">
+        ${EINWAENDE.map((o,i)=>`<div style="${i===0?"border-top:none;padding-top:0":""}"><strong>„${esc(o.e)}“</strong><q>${esc(o.a)}</q><p>${esc(o.p)}</p></div>`).join("")}
+      </div>
+    </div></div>
+  </div>`;
+}
+
+/* ---------- Rechte Spalte ---------- */
+function detailHtml(l){
+  if(!l) return `<div class="d-empty">Wähl links einen Kunden aus.<br>Mit <b>J</b> und <b>K</b> gehst du die Liste durch.</div>`;
+  const st = STUFE[l.stufe], f = faellig(l);
+  const idx = REIHE.indexOf(l.stufe);
+  const leiter = [
+    ["neu","Mail schreiben", ""],
+    ["mail","Mail raus", l.mailAm],
+    ["anruf","Angerufen", l.anrufAm],
+    ["besuch","Vor Ort", l.besuchAm]
+  ];
+  const calDone = l.kalenderEventId || l.kalenderAm;
+  const msg = calMsg && calMsg.id===l.id ? calMsg : null;
+  return `
+  <div class="d-head">
+    <div class="d-top">
+      <div><h2>${esc(l.firma)}</h2><div class="ort">${esc(l.ort)}${l.branche?" · "+esc(l.branche):""}</div></div>
+      <div class="rowi" style="flex-wrap:nowrap">
+        <button class="btn sm q" data-act="fav" aria-label="Favorit">${l.favorit?"★":"☆"}</button>
+        <button class="btn sm q" data-act="edit">Bearbeiten</button>
+      </div>
+    </div>
+    <div class="tags">
+      <span class="tag ${st.farbe}">${st.label}</span>
+      ${l.angebot?`<span class="tag">${esc(l.angebot)}</span>`:""}
+      ${l.stufe==="kunde"&&l.umsatz?`<span class="tag solid">${esc(eur(l.umsatz))}${l.umsatzTyp==="monatlich"?" / Monat":""}</span>`:""}
+      ${f&&f.seit>=14?`<span class="tag r">${f.seit} Tage überfällig</span>`:""}
+      ${(l.versuche||0)?`<span class="tag">${l.versuche} Anrufversuch${l.versuche>1?"e":""}</span>`:""}
+    </div>
+  </div>
+  <div class="d-body">
+    ${!ZU.includes(l.stufe)?`<div class="sec"><h4>Leiter ${f?`<em>jetzt: ${TUN[f.tun].titel.toLowerCase()}</em>`:l.wiedervorlage?`<em>weiter am ${dk(l.wiedervorlage)}</em>`:""}</h4>
+      <div class="stufen">${leiter.map(([s,txt,am],i)=>{
+        const fertig = idx>REIHE.indexOf(s) || (idx>=4 && i<4);
+        const hier = l.stufe===s;
+        return `<div class="sb ${hier?"is":fertig?"ok":""}"><span class="mk">${fertig?"✓":hier?"●":""}</span>${txt}${am?`<time>${dk(am)}</time>`:""}</div>`;
+      }).join("")}</div></div>`:""}
+
+    <div class="sec"><h4>Kontakt</h4>
+      <dl class="kv">
+        ${l.ansprechpartner?`<dt>Person</dt><dd><span class="v">${esc(l.ansprechpartner)}</span></dd>`:""}
+        <dt>Telefon</dt><dd>${l.telefon?`<span class="v num">${esc(l.telefon)}</span><button class="btn sm q" data-act="copytel">Kopieren</button>`:`<span style="color:var(--ink3)">—</span>`}</dd>
+        <dt>Mail</dt><dd>${l.email?`<span class="v">${esc(l.email)}</span><button class="btn sm q" data-act="copymail">Kopieren</button>`:`<span style="color:var(--ink3)">—</span>`}</dd>
+        <dt>Web</dt><dd>${web(l.website)?`<a href="${esc(web(l.website))}" target="_blank" rel="noopener">${esc(webk(l.website))}</a>`:`<span style="color:var(--ink3)">—</span>`}</dd>
+        <dt>Adresse</dt><dd><span class="v">${esc(l.adresse||l.ort)||"—"}</span><a class="btn sm q" href="${esc(maps(l))}" target="_blank" rel="noopener">Maps</a></dd>
+      </dl>
+    </div>
+
+    <div class="sec"><h4>Stufe setzen</h4>
+      <div class="pick4">
+        ${REIHE.filter(s=>s!=="neu").map(s=>`<button class="btn sm ${l.stufe===s?"pri":"q"}" data-act="st-${s}">${STUFE[s].label}</button>`).join("")}
+      </div>
+    </div>
+
+    ${l.stufe==="kunde"?`<div class="sec"><h4>Umsatz</h4><div class="rowi">
+      <input type="number" id="d-um" min="0" step="10" value="${l.umsatz||0}" style="width:110px"> €
+      <select id="d-umt"><option value="einmalig"${l.umsatzTyp!=="monatlich"?" selected":""}>einmalig</option><option value="monatlich"${l.umsatzTyp==="monatlich"?" selected":""}>monatlich</option></select>
+    </div></div>`:""}
+
+    <div class="sec"><h4>Nächster Schritt am</h4><div class="rowi">
+      <input type="date" id="d-wv" value="${esc(l.wiedervorlage)}">
+      <button class="btn sm q" data-wv="1">morgen</button>
+      <button class="btn sm q" data-wv="5">+5 Tage</button>
+      <button class="btn sm q" data-wv="14">+2 Wochen</button>
+    </div></div>
+
+    <div class="sec"><h4>Termin</h4>
+      <div class="rowi"><input type="datetime-local" id="d-termin" value="${esc(l.terminAm||"")}">
+        <select id="d-dauer">${[30,45,60,90,120].map(m=>`<option value="${m}"${(l.terminDauer||60)===m?" selected":""}>${m} Min.</option>`).join("")}</select></div>
+      <input type="text" id="d-tort" placeholder="Ort, z. B. beim Kunden vor Ort" value="${esc(l.terminOrt||"")}" style="margin-top:7px">
+      <div class="rowi" style="margin-top:7px">
+        <button class="btn sm" id="d-cal" ${calBusy||!mcp?"disabled":""}>${calDone?"Nochmal in den Kalender":"In Google Kalender"}</button>
+        <button class="btn sm q" id="d-tsave">Nur speichern</button>
+      </div>
+      <p style="font-size:12.5px;margin-top:6px;color:${msg&&msg.kind==="err"?"var(--stop)":msg&&msg.kind==="ok"?"var(--go)":"var(--ink3)"}">${msg?esc(msg.text):
+        !mcp?"Noch nicht mit der Tabelle verbunden. Der Termin wird nur lokal gespeichert."
+        :calDone?"Steht im Kalender, eingetragen am "+esc(dk(l.kalenderAm))+"."
+        :"Trägt den Termin in deinen Kalender ein."}</p>
+    </div>
+
+    <div class="sec"><h4>Chance <em>erwartet ${eur(erw(l))}</em></h4><div class="rowi">
+      <input type="number" id="d-ch" min="0" max="100" value="${l.chance||0}" style="width:66px"> %
+      <span style="color:var(--ink3)">×</span>
+      <input type="number" id="d-pot" min="0" step="10" value="${l.potenzial||0}" style="width:92px"> €
+    </div>${l.chanceGrund?`<p style="font-size:13px;color:var(--ink2);margin-top:7px">${esc(l.chanceGrund)}</p>`:""}</div>
+
+    ${l.aufhaenger?`<div class="sec"><h4>Aufhänger</h4><p style="font-size:14px;line-height:1.55;margin:0">${esc(l.aufhaenger)}</p></div>`:""}
+    <div class="sec"><h4>Notiz</h4><textarea data-f="notiz" placeholder="Was kam raus?" style="min-height:110px">${esc(l.notiz)}</textarea></div>
+    ${(l.historie||[]).length?`<div class="sec"><h4>Verlauf</h4><div class="hist">${[...l.historie].reverse().map(e=>`<div><time>${esc(dl(e.slice(0,10)))}</time>${esc(e.slice(11))}</div>`).join("")}</div></div>`:""}
+    ${l.quelle?`<div class="sec"><dl class="kv"><dt>Woher</dt><dd><span class="v">${esc(l.quelle)}</span></dd></dl></div>`:""}
+    <div><button class="del" data-act="delete">${armDel?"Nochmal klicken zum endgültigen Löschen":"Kunde löschen"}</button></div>
+  </div>`;
+}
+
+/* ---------- Rendern ---------- */
+const TITEL = {heute:"Heute", wartet:"Wartet", alle:"Alle Kunden", zahlen:"Zahlen", skript:"Telefon-Skript"};
+function render(opts){
+  const o = offen();
+  const { g, mehrMails } = tagesPlan();
+  const dran = TUNREIHE.reduce((a,k)=>a+g[k].length,0);
+  const kp = [
+    ["Heute dran", dran, dran?"hot":""],
+    ["Mail noch nicht raus", o.filter(l=>l.stufe==="neu").length, ""],
+    ["Wartet auf Antwort", o.filter(l=>l.stufe==="mail").length, "wait"],
+    ["Haben geantwortet", leads.filter(l=>l.stufe==="antwort").length, "go"],
+    ["Termine", leads.filter(l=>l.stufe==="termin").length, "mark"],
+    ["Kunden", leads.filter(l=>l.stufe==="kunde").length, "go"],
+    ["Umsatz gewonnen", eur(umsatzSumme()), "go wide"]
+  ];
+  $("#kpis").innerHTML = kp.map(([k,v,c])=>`<div class="kpi ${c}"><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  $("#c-heute").textContent = dran || "";
+  $("#c-wartet").textContent = o.filter(l=>!faellig(l)).length || "";
+  $("#c-alle").textContent = leads.length || "";
+  $("#c-geld").textContent = umsatzSumme() ? eur(umsatzSumme()) : "";
+  $("#title").innerHTML = TITEL[tab] + (
+    tab==="heute" ? `<small>${g.mailen.length} Mails · ${g.anrufen.length} Anrufe${g.antwort.length?" · "+g.antwort.length+" Antwort":""}</small>` :
+    tab==="alle"  ? `<small>${leads.filter(passt).length} von ${leads.length}</small>` : "");
+  const sc = $("#view").scrollTop;
+  $("#view").innerHTML = tab==="heute"?viewHeute():tab==="wartet"?viewWartet():tab==="alle"?viewAlle():tab==="zahlen"?viewZahlen():viewSkript();
+  $("#view").scrollTop = sc;
+  if(!pick && liste.length) pick = liste[0].id;
+  if(!(opts&&opts.keepDetail)) renderDetail();
+}
+function renderDetail(){
+  const d = $("#detail"), a = document.activeElement;
+  if(a && d.contains(a) && /^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName) && d.dataset.id===pick) return;
+  const sc = d.dataset.id===pick ? d.scrollTop : 0;
+  d.dataset.id = pick || "";
+  d.innerHTML = detailHtml(akt());
+  d.scrollTop = sc;
+}
+function select(id, scroll){
+  if(pick!==id){ armDel=false; calMsg=null; edit=null; }
+  pick = id; render();
+  if(scroll) document.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({block:"nearest"});
+}
+
+/* ---------- Aktionen ---------- */
+async function copy(t, label){
+  try { await navigator.clipboard.writeText(t); toast(label+" kopiert"); }
+  catch(e){ toast("Kopieren ging nicht — Text ist markierbar, mit Strg+C kopieren"); }
+}
+function act(l, a){
+  if(a==="toggle"){ open = open===l.id ? null : l.id; edit=null; return select(l.id); }
+  if(a==="edit") return openForm(l);
+  if(a==="fav") return save(l,{favorit:!l.favorit});
+  if(a==="copytel") return copy(l.telefon,"Nummer");
+  if(a==="copymail") return copy(l.email,"Adresse");
+  if(a==="mailcopy") return copy(l.mailText||"","Mailtext");
+  if(a==="delete") return doDelete(l);
+  if(a==="mailedit"){ edit=l.id; open=l.id; return render(); }
+  if(a==="mailcancel"){ edit=null; return render(); }
+  if(a==="mailsave"){
+    const s=$("#ed-subj"), b=$("#ed-body"); if(!s||!b) return;
+    edit=null; save(l,{mailBetreff:s.value.trim(), mailText:b.value});
+    return toast("Text übernommen");
+  }
+  if(a==="mailraus"){ open=null; return setStufe(l,"mail"); }
+  if(a==="spaeter"){ return save(l,{wiedervorlage:plus(14), historie:log(l,"später nochmal")}); }
+  if(a==="kunde") return fragUmsatz(l);
+  if(a.startsWith("st-")){
+    const s = a.slice(3);
+    if(s==="kunde") return fragUmsatz(l);
+    return setStufe(l, s);
+  }
+  if(STUFE[a]){ if(a!=="termin") open=null; return setStufe(l,a); }
+}
+function fragUmsatz(l){
+  $("#sheetRoot").innerHTML = `<div class="backdrop" id="bd"><form class="sheet" id="uf" style="max-width:460px">
+    <h2>${esc(l.firma)} ist Kunde</h2>
+    <div class="form" style="grid-template-columns:1fr 1fr">
+      <label><span>Auftragswert in Euro</span><input type="number" id="u-w" min="0" step="10" value="${l.umsatz||l.wert||l.potenzial||""}" autofocus></label>
+      <label><span>Abrechnung</span><select id="u-t">
+        <option value="einmalig"${(l.umsatzTyp||l.werttyp)!=="monatlich"?" selected":""}>einmalig</option>
+        <option value="monatlich"${(l.umsatzTyp||l.werttyp)==="monatlich"?" selected":""}>monatlich</option></select></label>
+      <label class="w3" style="grid-column:1/-1"><span>Was war's</span><input type="text" id="u-a" value="${esc(l.angebot)}"></label>
+    </div>
+    <div class="sheetacts"><button type="button" class="btn q" id="u-ab">Abbrechen</button>
+      <button type="submit" class="btn good">Als Kunde eintragen</button></div>
+  </form></div>`;
+  const zu = () => $("#sheetRoot").innerHTML="";
+  $("#bd").addEventListener("mousedown", e=>{ if(e.target.id==="bd") zu(); });
+  $("#u-ab").onclick = zu;
+  $("#uf").addEventListener("submit", e=>{
+    e.preventDefault();
+    const um = Number($("#u-w").value)||0, ut = $("#u-t").value, ang = $("#u-a").value.trim();
+    zu(); open=null;
+    setStufe(l,"kunde",{umsatz:um, umsatzTyp:ut, angebot:ang, wert:um, werttyp:ut});
+    toast(l.firma+" · Kunde · "+eur(um));
+  });
+  setTimeout(()=>$("#u-w")?.focus(),50);
+}
+async function doDelete(l){
+  if(!armDel){ armDel=true; renderDetail(); setTimeout(()=>{ if(armDel){armDel=false; renderDetail();} },4000); return; }
+  armDel=false;
+  const i = liste.findIndex(x=>x.id===l.id);
+  if(db){ try{ await db.doc("leads/"+l.id).delete(); }catch(e){ return toast("Nicht gelöscht: "+(e.code||e.message)); } }
+  leads = leads.filter(x=>x.id!==l.id);
+  pick = (liste[i+1]||liste[i-1]||{}).id || null;
+  render(); toast(l.firma+" gelöscht");
+}
+
+/* ---------- Ereignisse ---------- */
+$("#nav").addEventListener("click", e => {
+  const b = e.target.closest("button[data-tab]"); if(!b) return;
+  tab = b.dataset.tab;
+  [...$("#nav").children].forEach(x=>x.setAttribute("aria-selected", x===b));
+  try{ localStorage.setItem("lt_tab", tab); }catch(err){}
+  render();
+});
+$("#fs").innerHTML = ["alle",...REIHE].map(s=>`<option value="${s}">${s==="alle"?"Alle Stufen":STUFE[s].label}</option>`).join("");
+$("#fs").addEventListener("change", e=>{ fs=e.target.value; render(); });
+$("#q").addEventListener("input", e=>{ fq=e.target.value; clearTimeout(window._q); window._q=setTimeout(()=>render({keepDetail:true}),150); });
+
+$("#view").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if(th){ const k=th.dataset.sort; if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=(k==="versuche")?-1:1; } return render({keepDetail:true}); }
+  const host = e.target.closest("[data-id]");
+  const b = e.target.closest("[data-act]");
+  if(b && host){
+    if(b.tagName==="A") return;
+    e.preventDefault();
+    const l = byId(host.dataset.id); if(!l) return;
+    pick = l.id; return act(l, b.dataset.act);
+  }
+  if(host && !e.target.closest("a,details,summary")) select(host.dataset.id);
+});
+$("#view").addEventListener("change", e => {
+  if(e.target.id==="cf-p") return saveCfg({tagespensum:Math.max(1,Math.min(30,+e.target.value||5))});
+  if(e.target.id==="cf-a") return saveCfg({tageBisAnruf:Math.max(1,Math.min(30,+e.target.value||5))});
+  if(e.target.id==="cf-b") return saveCfg({tageBisBesuch:Math.max(1,Math.min(60,+e.target.value||5))});
+  if(e.target.id==="cf-n") return saveCfg({nachschubSchwelle:Math.max(0,Math.min(200,+e.target.value||10))});
+});
+
+$("#detail").addEventListener("click", e => {
+  const l = akt(); if(!l) return;
+  const b = e.target.closest("[data-act]");
+  if(b && b.tagName!=="A"){ e.preventDefault(); return act(l, b.dataset.act); }
+  const wv = e.target.closest("[data-wv]");
+  if(wv){ const n=+wv.dataset.wv; save(l,{wiedervorlage:plus(n)}); return toast("Weiter am "+dk(plus(n))); }
+  if(e.target.id==="d-tsave"){ saveTermin(l); return toast("Termin gespeichert"); }
+  if(e.target.id==="d-cal") return addToCalendar(l);
+});
+$("#detail").addEventListener("change", e => {
+  const l = akt(); if(!l) return;
+  if(e.target.id==="d-wv") save(l,{wiedervorlage:e.target.value});
+  if(e.target.id==="d-ch") save(l,{chance:Math.max(0,Math.min(100,Math.round(+e.target.value||0)))});
+  if(e.target.id==="d-pot") save(l,{potenzial:Math.max(0,Math.round(+e.target.value||0))});
+  if(e.target.id==="d-um") save(l,{umsatz:Math.max(0,Math.round(+e.target.value||0))});
+  if(e.target.id==="d-umt") save(l,{umsatzTyp:e.target.value});
+});
+$("#detail").addEventListener("input", e => {
+  const ta = e.target.closest("textarea[data-f]"); if(!ta) return;
+  const l = akt(); if(!l) return;
+  l[ta.dataset.f] = ta.value;
+  clearTimeout(ta._t);
+  ta._t = setTimeout(()=>{ if(db) db.doc("leads/"+l.id).update({[ta.dataset.f]:ta.value}).catch(err=>toast("Nicht gespeichert")); },700);
+});
+
+/* ---------- Google Kalender ---------- */
+function saveTermin(l){
+  const f = { terminAm:$("#d-termin").value, terminDauer:+$("#d-dauer").value||60, terminOrt:$("#d-tort").value.trim() };
+  const p = {...f};
+  if(f.terminAm && !["termin","angebot","kunde"].includes(l.stufe)){ p.stufe="termin"; p.letzterKontakt=heute(); p.historie=log(l,"Termin vereinbart"); }
+  if(f.terminAm) p.wiedervorlage = f.terminAm.slice(0,10);
+  save(l,p); return f;
+}
+const CAL_ERR = {
+  needs_reauth:"Google Kalender muss neu verbunden werden: claude.ai → Einstellungen → Connectors.",
+  server_not_connected:"Google Kalender ist nicht verbunden. Unter claude.ai → Einstellungen → Connectors hinzufügen.",
+  selection_required:"Es gibt mehrere Kalender-Verbindungen. Eine im Hinweis von Claude auswählen und nochmal klicken.",
+  not_in_manifest:"Der Kalenderzugriff für diese Seite wurde abgelehnt. Seite neu laden, dann wird nochmal gefragt.",
+  blocked_by_policy:"Deine Organisation blockiert das Eintragen in den Kalender von hier aus.",
+  approval_required:"Deine Organisation verlangt dafür eine Freigabe, die hier nicht geht.",
+  server_unavailable:"Der Kalender hat nicht geantwortet. Erst im Kalender nachsehen, bevor du nochmal klickst.",
+  upstream_error:"Unklar, ob der Termin angekommen ist. Bitte im Kalender nachsehen."
+};
+async function addToCalendar(l){
+  const f = saveTermin(l);
+  if(!f.terminAm){ calMsg={id:l.id,kind:"err",text:"Bitte erst Datum und Uhrzeit wählen."}; return renderDetail(); }
+  if(!mcp) return;
+  const start = new Date(f.terminAm), end = new Date(start.getTime()+f.terminDauer*60000);
+  const desc = [
+    l.ansprechpartner && "Ansprechpartner: "+l.ansprechpartner,
+    l.telefon && "Telefon: "+l.telefon,
+    l.email && "Mail: "+l.email,
+    l.angebot && "Angebot: "+l.angebot+(l.wert?" ("+geld(l)+")":""),
+    web(l.website) && "Website: "+web(l.website),
+    l.aufhaenger && "\nAufhänger: "+l.aufhaenger,
+    l.notiz && "\nNotiz: "+l.notiz,
+    "\nAus dem Leadtracker"
+  ].filter(Boolean).join("\n");
+  calBusy=true; calMsg={id:l.id,kind:"",text:"Trage ein …"}; renderDetail();
+  try{
+    const res = await mcp.callTool(CAL,"create_event",{
+      summary:"Termin: "+l.firma+(l.ort?" ("+l.ort+")":""),
+      startTime:start.toISOString(), endTime:end.toISOString(), timeZone:"Europe/Berlin",
+      location:f.terminOrt || [l.firma,l.adresse||l.ort].filter(Boolean).join(", "),
+      description:desc });
+    const p = res && res.payload;
+    const ev = (p && typeof p==="object" && (p.id||p.eventId||(p.event&&p.event.id))) || "";
+    const patch = {kalenderAm:heute()}; if(ev) patch.kalenderEventId = String(ev);
+    calMsg={id:l.id,kind:"ok",text:"Im Kalender: "+fmtT(f.terminAm)+"."};
+    calBusy=false; save(l,patch); toast("Termin im Kalender");
+  } catch(err){
+    calBusy=false;
+    const code = err && err.code;
+    calMsg = {id:l.id, kind:"err", text: CAL_ERR[code] ||
+      (code==="tool_error" ? "Der Kalender hat abgelehnt: "+(err.message||"unbekannter Fehler")
+                           : "Eintragen hat nicht geklappt ("+(code||"Fehler")+"). Bitte im Kalender prüfen.")};
+    renderDetail();
+  }
+}
+
+/* ---------- Tastatur ---------- */
+document.addEventListener("keydown", e => {
+  if($("#sheetRoot").firstChild){ if(e.key==="Escape") $("#sheetRoot").innerHTML=""; return; }
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){ if(e.key==="Escape") e.target.blur(); return; }
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const k = e.key.toLowerCase();
+  if(k==="/"){ e.preventDefault(); return $("#q").focus(); }
+  if(k==="a"){ e.preventDefault(); return openForm(null); }
+  if(k==="j"||k==="k"||e.key==="ArrowDown"||e.key==="ArrowUp"){
+    if(!liste.length) return; e.preventDefault();
+    const i = liste.findIndex(l=>l.id===pick), d = (k==="j"||e.key==="ArrowDown")?1:-1;
+    return select(liste[Math.max(0,Math.min(liste.length-1,(i<0?0:i+d)))].id, true);
+  }
+  const l = akt(); if(!l) return;
+  if(k==="enter"||e.key==="Enter"){ e.preventDefault(); return act(l,"toggle"); }
+  if(k==="f") return act(l,"fav");
+  if(k==="e"){ e.preventDefault(); return act(l,"edit"); }
+  if(k==="c" && l.telefon) return act(l,"copytel");
+});
+
+/* ---------- Formular ---------- */
+const QUELLEN = ["Recherche-Agent","eigene Recherche","persönlich getroffen","Empfehlung","Anfrage über Website","Instagram"];
+function openForm(l){
+  const v = l || {firma:"",ort:"",adresse:"",ansprechpartner:"",branche:"",angebot:"",telefon:"",email:"",website:"",
+    aufhaenger:"",notiz:"",stufe:"neu",quelle:"persönlich getroffen",wert:0,werttyp:"einmalig",wiedervorlage:""};
+  const opt = (arr,cur) => arr.map(x=>`<option value="${esc(x)}"${x===cur?" selected":""}>${esc(x)}</option>`).join("");
+  $("#sheetRoot").innerHTML = `<div class="backdrop" id="bd"><form class="sheet" id="f-form">
+    <h2>${l?"Kunde bearbeiten":"Kunde hinzufügen"}</h2>
+    <div class="form">
+      <label class="w2"><span>Firma</span><input id="f-firma" value="${esc(v.firma)}" required></label>
+      <label><span>Ort</span><input id="f-ort" value="${esc(v.ort)}"></label>
+      <label class="w2"><span>Straße und Hausnummer</span><input id="f-adr" value="${esc(v.adresse)}" placeholder="für Maps und Vorbeifahren"></label>
+      <label><span>Ansprechpartner</span><input id="f-ap" value="${esc(v.ansprechpartner)}"></label>
+      <label><span>Branche</span><input id="f-branche" value="${esc(v.branche)}"></label>
+      <label><span>Woher</span><select id="f-quelle">${opt(QUELLEN,v.quelle||"persönlich getroffen")}</select></label>
+      <label><span>Stufe</span><select id="f-stufe">${REIHE.map(k=>`<option value="${k}"${k===v.stufe?" selected":""}>${STUFE[k].label}</option>`).join("")}</select></label>
+      <label><span>Telefon</span><input id="f-tel" value="${esc(v.telefon)}"></label>
+      <label><span>Mail</span><input id="f-mail" type="email" value="${esc(v.email)}"></label>
+      <label><span>Website</span><input id="f-web" value="${esc(v.website)}"></label>
+      <label><span>Angebot</span><input id="f-angebot" value="${esc(v.angebot)}"></label>
+      <label><span>Wert in €</span><input id="f-wert" type="number" min="0" step="10" value="${v.wert||""}"></label>
+      <label><span>Abrechnung</span><select id="f-werttyp">${opt(["einmalig","monatlich"],v.werttyp)}</select></label>
+      <label><span>Chance in %</span><input id="f-ch" type="number" min="0" max="100" value="${v.chance||""}"></label>
+      <label><span>Potenzial in €</span><input id="f-pot" type="number" min="0" step="10" value="${v.potenzial||""}"></label>
+      <label><span>Nächster Schritt</span><input id="f-wv" type="date" value="${esc(v.wiedervorlage)}"></label>
+      <label class="w3"><span>Aufhänger — warum gerade dieser Betrieb</span><textarea id="f-auf">${esc(v.aufhaenger)}</textarea></label>
+      <label class="w3"><span>Notiz</span><textarea id="f-notiz">${esc(v.notiz)}</textarea></label>
+    </div>
+    <div class="sheetacts"><button type="button" class="btn q" id="f-ab">Abbrechen</button>
+      <button type="submit" class="btn pri">${l?"Speichern":"Anlegen"}</button></div>
+  </form></div>`;
+  const zu = () => $("#sheetRoot").innerHTML="";
+  $("#bd").addEventListener("mousedown", e=>{ if(e.target.id==="bd") zu(); });
+  $("#f-ab").onclick = zu;
+  $("#f-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const firma = $("#f-firma").value.trim(); if(!firma) return;
+    const data = {
+      firma, ort:$("#f-ort").value.trim(), adresse:$("#f-adr").value.trim(),
+      ansprechpartner:$("#f-ap").value.trim(), branche:$("#f-branche").value.trim(),
+      angebot:$("#f-angebot").value.trim(), telefon:$("#f-tel").value.trim(),
+      email:$("#f-mail").value.trim(), website:$("#f-web").value.trim(),
+      aufhaenger:$("#f-auf").value.trim(), notiz:$("#f-notiz").value.trim(),
+      stufe:$("#f-stufe").value, quelle:$("#f-quelle").value, wiedervorlage:$("#f-wv").value,
+      wert:Number($("#f-wert").value)||0, werttyp:$("#f-werttyp").value,
+      chance:Math.max(0,Math.min(100,Number($("#f-ch").value)||0)), potenzial:Number($("#f-pot").value)||0
+    };
+    if(!l) Object.assign(data,{favorit:false, letzterKontakt:"", versuche:0, historie:[heute()+" angelegt"],
+      mailBetreff:"", mailText:"", mailAm:"", anrufAm:"", besuchAm:"", terminAm:"", umsatz:0, umsatzTyp:"einmalig"});
+    const id = l ? l.id : slug(firma+"-"+(data.ort||""))+"-"+Math.random().toString(36).slice(2,6);
+    try{
+      if(db){ if(l) await db.doc("leads/"+id).update(data); else await db.doc("leads/"+id).set(data); }
+      const i = leads.findIndex(x=>x.id===id), nl = norm({...(l||{}), id, ...data});
+      if(i>=0) leads[i]=nl; else leads.push(nl);
+      pick = id; zu(); render(); toast(l?"Gespeichert":firma+" angelegt");
+    } catch(err){ toast("Nicht gespeichert: "+(err.code||err.message)); }
+  });
+  setTimeout(()=>$("#f-firma")?.focus(),50);
+}
+$("#addBtn").onclick = () => openForm(null);
+
+/* ---------- Start ---------- */
+function norm(d){
+  let s = d.stufe || ALT[d.status] || d.status || "neu";
+  if(!STUFE[s]) s = "neu";
+  /* Alte Daten: wer eine Mail bekam, aber noch auf "neu" steht, gehört auf "mail". */
+  if(s==="neu" && d.mailAm) s = "mail";
+  return { id:d.id, firma:d.firma||"", ort:d.ort||"", adresse:d.adresse||"", branche:d.branche||"",
+    website:(d.website&&d.website!=="-")?d.website:"", email:d.email||"", telefon:d.telefon||"",
+    ansprechpartner:d.ansprechpartner||"", angebot:d.angebot||"", aufhaenger:d.aufhaenger||"",
+    ansprache:d.ansprache||"", notiz:d.notiz||"", quelle:d.quelle||"", stufe:s,
+    wiedervorlage:d.wiedervorlage||"", letzterKontakt:d.letzterKontakt||"", favorit:!!d.favorit,
+    mailBetreff:d.mailBetreff||"", mailText:d.mailText||"", mailAm:d.mailAm||"",
+    anrufAm:d.anrufAm||"", besuchAm:d.besuchAm||"", versuche:Number(d.versuche)||0,
+    terminAm:d.terminAm||"", terminDauer:Number(d.terminDauer)||60, terminOrt:d.terminOrt||"",
+    kalenderAm:d.kalenderAm||"", kalenderEventId:d.kalenderEventId||"",
+    chance:Number(d.chance)||0, potenzial:Number(d.potenzial)||0, chanceGrund:d.chanceGrund||"",
+    wert:Number(d.wert)||0, werttyp:d.werttyp==="monatlich"?"monatlich":"einmalig",
+    umsatz:Number(d.umsatz)||0, umsatzTyp:d.umsatzTyp==="monatlich"?"monatlich":"einmalig",
+    historie:Array.isArray(d.historie)?d.historie.map(String):[] };
+}
+
+/* ============================================================
+   Datenschicht: Google Tabelle über Apps Script.
+   Die App redet weiter mit db.doc(...) und db.collection(...),
+   nur liegt dahinter jetzt deine Tabelle statt der Artifact-Datenbank.
+   ============================================================ */
+const LS_URL = "lt_api_url", LS_TOK = "lt_api_token";
+const cfgGet = k => { try { return localStorage.getItem(k) || ""; } catch(e){ return ""; } };
+const cfgSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
+
+function setStatus(ok, grund){
+  const b = document.querySelector("#savebar"), d = document.querySelector("#dot");
+  if(!b) return;
+  b.textContent = ok ? "Gespeichert in deiner Google Tabelle"
+                     : "Keine Verbindung" + (grund ? " ("+grund+")" : "") + " · hier klicken";
+  d.className = "dot " + (ok ? "on" : "off");
+}
+
+function makeDB(url, token){
+  let onLeads = null, onCfg = null, timer = null, laeuft = false;
+  async function call(ops){
+    const res = await fetch(url, { method:"POST", redirect:"follow",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ token, ops: ops || [] }) });
+    if(!res.ok) throw { code:"http_"+res.status, message:"Server antwortete mit "+res.status };
+    const data = await res.json();
+    if(!data.ok) throw { code:data.error||"error", message:data.error||"Fehler" };
+    return data;
+  }
+  function verteilen(data){
+    if(onLeads && data.leads) onLeads({ docs: Object.keys(data.leads).map(id => ({ id, data: () => data.leads[id] })) });
+    if(onCfg) onCfg({ data: () => data.config || null });
+  }
+  async function sync(ops){
+    if(laeuft && !ops) return;
+    laeuft = true;
+    try { verteilen(await call(ops)); setStatus(true); }
+    catch(e){ setStatus(false, e.code || e.message); }
+    finally { laeuft = false; }
+  }
+  function starten(){
+    sync();
+    clearInterval(timer);
+    timer = setInterval(() => { if(!document.hidden) sync(); }, 20000);
+    document.addEventListener("visibilitychange", () => { if(!document.hidden) sync(); });
+  }
+  const ref = (col,id) => ({
+    update: d => sync([{op:"update", col, id, data:d}]),
+    set:    d => sync([{op:"set",    col, id, data:d}]),
+    delete: () => sync([{op:"delete", col, id}]),
+    onSnapshot(cb){ if(col==="config") onCfg = cb; }
+  });
+  return {
+    doc(path){ const i = path.indexOf("/"); return ref(path.slice(0,i), path.slice(i+1)); },
+    collection(col){ return { onSnapshot(cb){ onLeads = cb; starten(); } }; },
+    kalender: args => call([{op:"calendar", args}])
+  };
+}
+
+function banner(){
+  const d = document.createElement("div");
+  d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:var(--onaccent);"
+    + "padding:11px 18px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;"
+    + "font-weight:600;font-size:14.5px;box-shadow:0 2px 14px rgba(0,0,0,.18)";
+  d.innerHTML = '<span>Noch nicht mit deiner Google Tabelle verbunden. Änderungen gehen beim Neuladen verloren.</span>'
+    + '<button class="btn" id="bn-go" style="background:var(--surface);color:var(--ink);border-color:transparent">Jetzt verbinden</button>';
+  document.body.appendChild(d);
+  d.querySelector("#bn-go").onclick = openSetup;
+  requestAnimationFrame(() => {
+    const h = d.offsetHeight + "px";
+    [".side", ".bar", ".d-head", ".d-empty"].forEach(sel => {
+      const el = document.querySelector(sel);
+      if(el) el.style.paddingTop = "calc(" + h + " + 18px)";
+    });
+  });
+}
+
+/* ---------- Verbindungsfenster ---------- */
+function openSetup(){
+  const u = cfgGet(LS_URL).replace(/"/g,"&quot;"), t = cfgGet(LS_TOK).replace(/"/g,"&quot;");
+  document.querySelector("#sheetRoot").innerHTML = '<div class="backdrop" id="bd"><div class="sheet" style="max-width:600px">'
+    + '<h2>Mit deiner Google Tabelle verbinden</h2>'
+    + '<div class="form" style="grid-template-columns:1fr">'
+    + '<label class="w3"><span>Web-App-Adresse aus Apps Script</span>'
+    + '<input id="s-url" type="url" placeholder="https://script.google.com/macros/s/…/exec" value="'+u+'"></label>'
+    + '<label class="w3"><span>Schlüssel, derselbe wie oben in der Code.gs</span>'
+    + '<input id="s-tok" type="text" value="'+t+'"></label></div>'
+    + '<p class="hint" style="margin-top:12px">Ohne Verbindung läuft die App nur in diesem Browser und vergisst alles beim Neuladen.</p>'
+    + '<div class="sheetacts"><button class="btn q" id="s-imp">33 Leads importieren</button>'
+    + '<button class="btn q" id="s-abbr">Abbrechen</button>'
+    + '<button class="btn pri" id="s-ok">Verbinden</button></div></div></div>';
+  const zu = () => document.querySelector("#sheetRoot").innerHTML = "";
+  document.querySelector("#bd").addEventListener("click", e => { if(e.target.id==="bd") zu(); });
+  document.querySelector("#s-abbr").onclick = zu;
+  document.querySelector("#s-ok").onclick = () => {
+    cfgSet(LS_URL, document.querySelector("#s-url").value.trim());
+    cfgSet(LS_TOK, document.querySelector("#s-tok").value.trim());
+    zu(); location.reload();
+  };
+  document.querySelector("#s-imp").onclick = async () => {
+    const u = document.querySelector("#s-url").value.trim(), t = document.querySelector("#s-tok").value.trim();
+    if(!u) return toast("Erst die Web-App-Adresse eintragen.");
+    const b = document.querySelector("#s-imp"); b.disabled = true; b.textContent = "Importiere …";
+    try{
+      const roh = await (await fetch("leads.json", {cache:"no-store"})).json();
+      const ops = Object.keys(roh).map(id => ({op:"set", col:"leads", id, data:roh[id]}));
+      const res = await fetch(u, { method:"POST", redirect:"follow",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ token:t, ops }) });
+      const d = await res.json();
+      if(!d.ok) throw new Error(d.error || "Fehler");
+      cfgSet(LS_URL, u); cfgSet(LS_TOK, t);
+      toast(Object.keys(roh).length + " Leads importiert"); zu(); location.reload();
+    } catch(err){
+      b.disabled = false; b.textContent = "33 Leads importieren";
+      toast("Import fehlgeschlagen: " + (err.message || err));
+    }
+  };
+}
+
+$("#today").textContent = new Date().toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long"});
+try{ const t=localStorage.getItem("lt_tab"); if(t&&TITEL[t]){ tab=t; [...$("#nav").children].forEach(x=>x.setAttribute("aria-selected", x.dataset.tab===t)); } }catch(e){}
+document.querySelector(".savebar").style.cursor="pointer";
+document.querySelector(".savebar").addEventListener("click", openSetup);
+(async () => {
+  render();
+  const apiUrl = cfgGet(LS_URL), apiTok = cfgGet(LS_TOK);
+  if(!apiUrl){ setStatus(false, "noch nicht eingerichtet"); banner(); return; }
+  db = makeDB(apiUrl, apiTok);
+  mcp = { callTool: async (server, tool, args) => {
+    const r = await db.kalender(args);
+    if(!r.eventId) throw { code:"upstream_error", message:"Kalender hat keine Termin-Nummer geliefert" };
+    return { payload:{ id:r.eventId } };
+  }};
+  db.doc("config/app").onSnapshot(doc=>{
+    const d = doc && doc.data ? doc.data() : null;
+    if(d){ cfg = { tagespensum:Number(d.tagespensum)||5, tageBisAnruf:Number(d.tageBisAnruf)||5,
+      tageBisBesuch:Number(d.tageBisBesuch)||5, nachschubSchwelle:Number(d.nachschubSchwelle)||10 }; render(); }
+  });
+  db.collection("leads").onSnapshot(snap=>{
+    leads = snap.docs.map(d=>norm({id:d.id, ...d.data()})).sort((a,b)=>a.firma.localeCompare(b.firma,"de"));
+    render();
+  });
+})();
+</script>
+
+</body></html>
