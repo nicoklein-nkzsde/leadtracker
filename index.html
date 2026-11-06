@@ -1381,7 +1381,8 @@ function openSetup(){
     + '<label class="w3"><span>Schlüssel, derselbe wie oben in der Code.gs</span>'
     + '<input id="s-tok" type="text" value="'+t+'"></label></div>'
     + '<p class="hint" style="margin-top:12px">Ohne Verbindung läuft die App nur in diesem Browser und vergisst alles beim Neuladen.</p>'
-    + '<div class="sheetacts"><button class="btn q" id="s-imp">33 Leads importieren</button>'
+    + '<input type="file" id="s-file" accept="application/json" hidden>'
+    + '<div class="sheetacts"><button class="btn q" id="s-imp">Leads aus Datei importieren</button>'
     + '<button class="btn q" id="s-abbr">Abbrechen</button>'
     + '<button class="btn pri" id="s-ok">Verbinden</button></div></div></div>';
   const zu = () => document.querySelector("#sheetRoot").innerHTML = "";
@@ -1392,12 +1393,16 @@ function openSetup(){
     cfgSet(LS_TOK, document.querySelector("#s-tok").value.trim());
     zu(); location.reload();
   };
-  document.querySelector("#s-imp").onclick = async () => {
+  document.querySelector("#s-imp").onclick = () => {
+    if(!document.querySelector("#s-url").value.trim()) return toast("Erst die Web-App-Adresse eintragen.");
+    document.querySelector("#s-file").click();
+  };
+  document.querySelector("#s-file").onchange = async ev => {
+    const datei = ev.target.files && ev.target.files[0]; if(!datei) return;
     const u = document.querySelector("#s-url").value.trim(), t = document.querySelector("#s-tok").value.trim();
-    if(!u) return toast("Erst die Web-App-Adresse eintragen.");
     const b = document.querySelector("#s-imp"); b.disabled = true; b.textContent = "Importiere …";
     try{
-      const roh = await (await fetch("leads.json", {cache:"no-store"})).json();
+      const roh = JSON.parse(await datei.text());
       const ops = Object.keys(roh).map(id => ({op:"set", col:"leads", id, data:roh[id]}));
       const res = await fetch(u, { method:"POST", redirect:"follow",
         headers:{"Content-Type":"text/plain;charset=utf-8"},
@@ -1407,7 +1412,7 @@ function openSetup(){
       cfgSet(LS_URL, u); cfgSet(LS_TOK, t);
       toast(Object.keys(roh).length + " Leads importiert"); zu(); location.reload();
     } catch(err){
-      b.disabled = false; b.textContent = "33 Leads importieren";
+      b.disabled = false; b.textContent = "Leads aus Datei importieren";
       toast("Import fehlgeschlagen: " + (err.message || err));
     }
   };
