@@ -7,49 +7,25 @@
    Mail rausschicken, nach fünf Tagen anrufen, danach vorbeifahren. Links die Übersicht,
    rechts die Details des angeklickten Kunden. */
 :root{
-  --paper:#F4F6F9; --surface:#FFFFFF; --surface2:#E9ECF2; --hover:#F0F2F7;
-  --ink:#14161A; --ink2:#575F6E; --ink3:#8B93A3;
-  --line:rgba(20,22,26,.09); --line2:rgba(20,22,26,.17);
-  --accent:#0A52E0; --accent-soft:rgba(10,82,224,.09);
-  --go:#0F7A47; --go-soft:rgba(15,122,71,.10);
-  --wait:#8E5200; --wait-soft:rgba(142,82,0,.10);
-  --stop:#BE2219; --stop-soft:rgba(190,34,25,.09);
-  --mark:#5E36BE; --mark-soft:rgba(94,54,190,.10);
-  --onaccent:#FFFFFF;
-  --shadow:0 1px 2px rgba(16,20,30,.05), 0 4px 14px rgba(16,20,30,.05);
-  --lift:0 1px 2px rgba(16,20,30,.06), 0 14px 38px rgba(16,20,30,.10);
+  --paper:transparent;
+  --surface:rgba(255,255,255,.058); --surface2:rgba(255,255,255,.040); --hover:rgba(255,255,255,.090);
+  --ink:#F3F6FC; --ink2:#A9B3C6; --ink3:#78839A;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.20);
+  --accent:#6AA2FF; --accent-soft:rgba(106,162,255,.16);
+  --go:#3BD68E; --go-soft:rgba(59,214,142,.15);
+  --wait:#F5B547; --wait-soft:rgba(245,181,71,.15);
+  --stop:#FF7B86; --stop-soft:rgba(255,123,134,.15);
+  --mark:#B08BFF; --mark-soft:rgba(176,139,255,.15);
+  --onaccent:#07101C;
+  --glass:linear-gradient(155deg,rgba(255,255,255,.105),rgba(255,255,255,.035));
+  --glass2:linear-gradient(155deg,rgba(255,255,255,.065),rgba(255,255,255,.022));
+  --blur:saturate(1.6) blur(22px);
+  --shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.34);
+  --lift:inset 0 1px 0 rgba(255,255,255,.14), 0 26px 64px rgba(0,0,0,.55);
   --ui:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --say:"Newsreader",Georgia,"Times New Roman",serif;
   --num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --r:14px;
-  color-scheme:light;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#0A0C10; --surface:#15181F; --surface2:#1F232C; --hover:#1A1E26;
-    --ink:#EDEFF4; --ink2:#9BA3B4; --ink3:#697285;
-    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.17);
-    --accent:#6A9BFF; --accent-soft:rgba(106,155,255,.15);
-    --go:#45CE86; --go-soft:rgba(69,206,134,.15);
-    --wait:#E2A742; --wait-soft:rgba(226,167,66,.15);
-    --stop:#FF7267; --stop-soft:rgba(255,114,103,.15);
-    --mark:#B48DFF; --mark-soft:rgba(180,141,255,.15);
-    --onaccent:#0A0C10;
-    --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 14px 38px rgba(0,0,0,.55);
-    color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#0A0C10; --surface:#15181F; --surface2:#1F232C; --hover:#1A1E26;
-  --ink:#EDEFF4; --ink2:#9BA3B4; --ink3:#697285;
-  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.17);
-  --accent:#6A9BFF; --accent-soft:rgba(106,155,255,.15);
-  --go:#45CE86; --go-soft:rgba(69,206,134,.15);
-  --wait:#E2A742; --wait-soft:rgba(226,167,66,.15);
-  --stop:#FF7267; --stop-soft:rgba(255,114,103,.15);
-  --mark:#B48DFF; --mark-soft:rgba(180,141,255,.15);
-  --onaccent:#0A0C10;
-  --shadow:0 1px 2px rgba(0,0,0,.4); --lift:0 14px 38px rgba(0,0,0,.55);
+  --r:18px;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -337,6 +313,164 @@ table.grid{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
   .work{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
   .bar{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
   .report{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+}
+
+/* =============================================================
+   Glas-Oberflaeche. Aendert nur das Aussehen, keine Funktion:
+   dunkler Hintergrund mit Lichtschein, darueber durchscheinende
+   Karten mit weichem Rand. Alle Klassennamen bleiben gleich.
+   ============================================================= */
+body{
+  background:#070A11;
+  background-image:
+    radial-gradient(1100px 760px at 82% 10%, rgba(86,134,255,.26), transparent 62%),
+    radial-gradient(900px 680px at 10% 88%, rgba(255,158,88,.14), transparent 64%),
+    radial-gradient(900px 620px at 46% -8%, rgba(150,120,255,.18), transparent 60%),
+    radial-gradient(700px 700px at 96% 92%, rgba(59,214,142,.10), transparent 64%);
+  background-attachment:fixed;background-repeat:no-repeat;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(130% 110% at 50% 0%, transparent 38%, rgba(0,0,0,.55) 100%);
+}
+::selection{background:rgba(106,162,255,.32)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* Saeulen links und rechts */
+.side{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-right:1px solid rgba(255,255,255,.09)}
+.detail{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-left:1px solid rgba(255,255,255,.09)}
+.bar{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border-bottom:1px solid rgba(255,255,255,.09)}
+
+/* Marke */
+.brand b{background:linear-gradient(100deg,#FFFFFF,#A9C6FF 70%);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;letter-spacing:-.03em}
+
+/* Knopf oben links */
+.add{background:linear-gradient(140deg,#7FB0FF,#3C7BF0 62%,#2C61D8);color:#061018;border:1px solid rgba(255,255,255,.28);
+  border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 10px 26px rgba(50,110,240,.34);
+  transition:transform .18s ease, box-shadow .18s ease, filter .18s ease}
+.add:hover{filter:brightness(1.06);transform:translateY(-1px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 16px 34px rgba(50,110,240,.44)}
+.add:active{transform:translateY(0)}
+
+/* Reiter */
+.nav button{border:1px solid transparent;border-radius:12px;transition:background .18s ease, border-color .18s ease}
+.nav button:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08)}
+.nav button[aria-selected="true"]{background:var(--glass);border-color:rgba(255,255,255,.16);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+
+/* Kennzahlen */
+.kpi{background:var(--glass);border:1px solid rgba(255,255,255,.11);border-radius:16px;
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--shadow);
+  transition:transform .2s ease, box-shadow .2s ease}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--lift)}
+
+/* Karten der Arbeitsliste */
+.c{background:var(--glass);border:1px solid rgba(255,255,255,.11);border-radius:var(--r);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--shadow);
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease}
+.c:hover{transform:translateY(-3px);box-shadow:var(--lift);border-color:rgba(255,255,255,.18)}
+.c.open{transform:none;box-shadow:var(--lift);border-color:rgba(255,255,255,.2)}
+.c.pick{border-color:rgba(106,162,255,.65);box-shadow:var(--lift), 0 0 0 1px rgba(106,162,255,.28)}
+.c-row:hover{background:rgba(255,255,255,.05)}
+.c-n{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);color:var(--ink2)}
+.c.open .c-n{background:linear-gradient(140deg,#7FB0FF,#3C7BF0);color:#061018;border-color:rgba(255,255,255,.3)}
+.c-body{border-top:1px solid rgba(255,255,255,.09)}
+
+/* Flaechen in den Karten */
+.why,.subj,.mailtext,details.obj,.sb,.editsubj,.editbody{
+  background:var(--glass2);border:1px solid rgba(255,255,255,.09);border-radius:14px}
+.editsubj,.editbody{border-color:rgba(255,255,255,.16)}
+.sb{border-radius:12px}
+.sb.is{background:linear-gradient(155deg,rgba(106,162,255,.26),rgba(106,162,255,.10));border-color:rgba(106,162,255,.34)}
+.tag{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.10)}
+.tag.b{background:rgba(106,162,255,.16);border-color:rgba(106,162,255,.3)}
+.tag.g{background:rgba(59,214,142,.16);border-color:rgba(59,214,142,.3)}
+.tag.w{background:rgba(245,181,71,.16);border-color:rgba(245,181,71,.3)}
+.tag.r{background:rgba(255,123,134,.16);border-color:rgba(255,123,134,.3)}
+.tag.m{background:rgba(176,139,255,.16);border-color:rgba(176,139,255,.3)}
+.tag.solid{background:linear-gradient(140deg,#5BE0A4,#22B577);color:#04140C;border-color:rgba(255,255,255,.3)}
+
+/* Knoepfe */
+.btn{background:var(--glass2);border:1px solid rgba(255,255,255,.15);border-radius:12px;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  transition:background .16s ease, transform .16s ease, border-color .16s ease}
+.btn:hover{background:rgba(255,255,255,.12);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.pri{background:linear-gradient(140deg,#7FB0FF,#3C7BF0 65%);color:#061018;border-color:rgba(255,255,255,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 8px 22px rgba(50,110,240,.3)}
+.btn.pri:hover{background:linear-gradient(140deg,#93BCFF,#4B88F5 65%)}
+.btn.good{background:linear-gradient(140deg,#5BE0A4,#22B577 65%);color:#04140C;border-color:rgba(255,255,255,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 8px 22px rgba(34,181,119,.3)}
+.btn.good:hover{background:linear-gradient(140deg,#6FE8B1,#2AC684 65%)}
+.btn.g{border-color:rgba(59,214,142,.4)} .btn.r{border-color:rgba(255,123,134,.4)}
+.btn.m{border-color:rgba(176,139,255,.4)} .btn.w{border-color:rgba(245,181,71,.4)}
+.btn.q{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.10)}
+
+/* Eingabefelder */
+.bar input,.bar select,.rowi input,.rowi select,
+.d-body textarea,.d-body input[type="text"],
+.form input,.form select,.form textarea{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:12px;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  transition:border-color .16s ease, background .16s ease}
+.bar input::placeholder,.form input::placeholder,.form textarea::placeholder,
+.d-body textarea::placeholder,.d-body input::placeholder{color:var(--ink3)}
+.bar input:focus,.bar select:focus,.rowi input:focus,.rowi select:focus,
+.d-body textarea:focus,.d-body input:focus,
+.form input:focus,.form select:focus,.form textarea:focus{
+  border-color:rgba(106,162,255,.65);background:rgba(255,255,255,.10);outline:none;
+  box-shadow:0 0 0 3px rgba(106,162,255,.16)}
+option{background:#121722;color:var(--ink)}
+
+/* Tabelle */
+.grid th{background:rgba(10,14,22,.78);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(255,255,255,.12)}
+.grid td{border-bottom:1px solid rgba(255,255,255,.07)}
+.grid tbody tr:hover td{background:rgba(255,255,255,.055)}
+.grid tr.pick td{background:rgba(106,162,255,.16)}
+
+/* Zahlen-Seite */
+.panel{background:var(--glass);border:1px solid rgba(255,255,255,.11);border-radius:var(--r);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--shadow);
+  transition:transform .2s ease, box-shadow .2s ease}
+.panel:hover{transform:translateY(-2px);box-shadow:var(--lift)}
+.meter i{background:linear-gradient(90deg,#3C7BF0,#8FBBFF);box-shadow:0 0 14px rgba(106,162,255,.45)}
+.weeks div{background:rgba(255,255,255,.08);border-radius:7px 7px 0 0}
+.weeks div.now{background:linear-gradient(180deg,#8FBBFF,#3C7BF0);box-shadow:0 0 18px rgba(106,162,255,.45)}
+
+/* Rechte Spalte */
+.d-head{background:rgba(255,255,255,.04);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border-bottom:1px solid rgba(255,255,255,.09)}
+.d-head h2{letter-spacing:-.03em}
+
+/* Hinweis unten und Fenster */
+.toast{background:rgba(22,28,40,.9);color:var(--ink);border:1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 18px 44px rgba(0,0,0,.6)}
+.backdrop{background:rgba(5,8,14,.6);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.sheet{background:linear-gradient(160deg,rgba(32,40,58,.92),rgba(16,21,32,.94));
+  border:1px solid rgba(255,255,255,.14);border-radius:24px;
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 40px 90px rgba(0,0,0,.65)}
+.sheet h2{letter-spacing:-.03em}
+
+/* Punkt der Statuszeile */
+.dot{box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+.dot.on{box-shadow:0 0 0 3px rgba(59,214,142,.18), 0 0 12px rgba(59,214,142,.7)}
+.dot.off{box-shadow:0 0 0 3px rgba(245,181,71,.18), 0 0 12px rgba(245,181,71,.6)}
+
+@media (max-width:1180px){
+  .detail{border-left:none;border-top:1px solid rgba(255,255,255,.09)}
+}
+@media (max-width:760px){
+  .side{border-right:none;border-bottom:1px solid rgba(255,255,255,.09)}
+  .c:hover,.kpi:hover,.panel:hover{transform:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1364,11 +1498,13 @@ function makeDB(url, token){
 
 function banner(){
   const d = document.createElement("div");
-  d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:var(--onaccent);"
+  d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:70;color:#061018;"
+    + "background:linear-gradient(120deg,#8FBBFF,#4B88F5 55%,#3C7BF0);"
     + "padding:11px 18px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;"
-    + "font-weight:600;font-size:14.5px;box-shadow:0 2px 14px rgba(0,0,0,.18)";
+    + "font-weight:600;font-size:14.5px;border-bottom:1px solid rgba(255,255,255,.25);"
+    + "box-shadow:0 10px 34px rgba(40,100,230,.38)";
   d.innerHTML = '<span>Noch nicht mit deiner Google Tabelle verbunden. Änderungen gehen beim Neuladen verloren.</span>'
-    + '<button class="btn" id="bn-go" style="background:var(--surface);color:var(--ink);border-color:transparent">Jetzt verbinden</button>';
+    + '<button class="btn" id="bn-go" style="background:rgba(255,255,255,.26);color:#04101E;border-color:rgba(255,255,255,.5);backdrop-filter:blur(8px)">Jetzt verbinden</button>';
   document.body.appendChild(d);
   d.querySelector("#bn-go").onclick = openSetup;
   requestAnimationFrame(() => {
