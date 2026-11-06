@@ -5,8 +5,9 @@
 
    Einrichten:
    1. Neue Google Tabelle anlegen, z. B. "Leadtracker".
-   2. Erweiterungen → Apps Script. Diesen Code einfügen.
-   3. GEHEIM unten auf einen eigenen Schlüssel ändern.
+      Die ID steht in deren Adresse zwischen /d/ und /edit.
+   2. script.google.com öffnen, neues Projekt, diesen Code einfügen.
+   3. GEHEIM und TABELLE_ID oben eintragen.
    4. Einmal die Funktion einrichten() ausführen und die
       Berechtigungen bestätigen (Tabelle + Kalender).
    5. Bereitstellen → Neue Bereitstellung → Web-App,
@@ -14,8 +15,9 @@
    6. Die /exec-Adresse und den Schlüssel in der App eintragen.
    ============================================================= */
 
-var GEHEIM   = 'bitte-hier-einen-eigenen-schluessel-eintragen';
-var ZEITZONE = 'Europe/Berlin';
+var GEHEIM      = 'bitte-hier-einen-eigenen-schluessel-eintragen';
+var TABELLE_ID  = 'hier-die-id-deiner-google-tabelle';  // steht in der Adresse der Tabelle zwischen /d/ und /edit
+var ZEITZONE    = 'Europe/Berlin';
 var KALENDER_ID = '';   // leer = dein Hauptkalender
 
 var TAB_LEADS = 'Leads';
@@ -86,7 +88,7 @@ function termin(a) {
 /* ---------- Tabelle ---------- */
 
 function blatt(name, kopf) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(TABELLE_ID);
   var sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
